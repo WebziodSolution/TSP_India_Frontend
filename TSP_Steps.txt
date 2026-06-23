@@ -1,0 +1,24 @@
+(Step-1)
+    Login with your CompanyId and UserName or Face Login.Login success then redireact to dashboard
+(Step-2)
+    Go to permissions sections -> manage roles and add new roles and set permissions for role if not exits
+(Step-3)
+    Go to permissions sections -> manage departments and add new departments if not exits
+(Step-4)
+    Go to manage shifts section and add new shifts if not exits
+(Step-5)
+    Go to settings sections -> automation-rules -> overtime rules and add new OT rules for employee
+(Step-6)
+    Go to manage employees and add new employees and do registration process to add employee
+(Step-7)
+    Log out and relogin with Same CompanyId and use resently added employee username or pin/face login. Login success then redireact to dashboard
+(Step-8)
+    Check out header section for clock-in-out , also do from the dashboard
+(Step-9)
+    Log out and relogin with your CompanyId and username or pin/face login. Login success then redireact to dashboard
+(Step-10)
+    Go to reports section and exploer reports section -> PF Report and reports section -> PT reports
+(Step-11)
+    Go to reports section -> generate salary for generate employees salary statements and save 
+(Step-12)
+    Go to reports section -> salary report for show employees salary statements and download PDF or download salary-slip

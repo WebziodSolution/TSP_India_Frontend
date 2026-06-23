@@ -1,0 +1,35 @@
+/* Each user section = a PDF page */
+.pdf-page {
+    break-after: page;
+    /* modern */
+    page-break-after: always;
+    /* legacy */
+    break-inside: avoid;
+}
+
+/* Don't create a blank last page */
+.pdf-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+}
+
+.pdf-table {
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* Avoid rows splitting across pages */
+.pdf-table tr,
+.pdf-table td,
+.pdf-table th {
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+.pdf-table th,
+.pdf-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
