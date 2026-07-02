@@ -47,6 +47,8 @@ export const attendancePenaltyRulesURL = baseURL + '/attendancePenaltyRules'
 export const holidayTemplatesURL = baseURL + '/holidayTemplates'
 export const holidayTemplateDetailsURL = baseURL + '/holidayTemplateDetails'
 export const deductionsURL = baseURL + '/deductions'
+export const leaveTypeURL = baseURL + '/leaveType'
+export const employeeLeaveMasterURL = baseURL + '/employeeLeaveMaster'
 
 
 export const countryURL = baseURL + '/country'

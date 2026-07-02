@@ -46,6 +46,8 @@ import HolidaysTemplates from "./components/dashboard/settings/automationrRules/
 import AddHolidaysTemplates from "./components/dashboard/settings/automationrRules/holidaysTemplates/addHolidaysTemplates";
 import FaceRegistrationPage from "./pages/faceRegistrationPage";
 import AutoClockIn from "./components/dashboard/settings/automationrRules/autoClockIn/autoClockIn";
+import ManageLeaveType from "./components/dashboard/permissions/manageLeaveType/manageLeaveType";
+import ManageEmployeeLeave from "./components/dashboard/permissions/manageEmployeeLeave/manageEmployeeLeave";
 
 library.add(fas, far)
 
@@ -147,6 +149,14 @@ function App() {
         {
           path: "managedepartments",
           element: <Department />,
+        },
+        {
+          path: "manageleavetype",
+          element: <ManageLeaveType />,
+        },
+        {
+          path: "manageemployeeleave",
+          element: <ManageEmployeeLeave />,
         },
         {
           path: "contractor",
