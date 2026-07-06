@@ -55,6 +55,7 @@
     "eject": "react-scripts eject",
     "build:local": "env-cmd -f .env.local react-scripts build",
     "build:prod": "env-cmd -f .env.prod react-scripts build",
+    "build:dev": "env-cmd -f .env.dev react-scripts build",
     "build:apk": "build-apk.bat",
     "build:localapk": "npm run build:local && build-apk.bat",
     "restart": "start-local-server.bat",

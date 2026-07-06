@@ -167,55 +167,54 @@ const Login = ({ setAlert, handleSetUserDetails, handleSetTheme, setLoading }) =
                         localStorage.setItem("theme", JSON.stringify(theme.data.result))
                         handleSetTheme(theme.data.result)
                     }
+                }
+                if (response?.data?.result?.data?.checkGeofence === 1 && response?.data?.result?.data?.roleName !== 'Admin' && response?.data?.result?.data?.roleName !== 'Owner') {
+                    if (response.data.result?.data?.companyLocation) {
+                        const locations = await getLocations(JSON.parse(response.data.result?.data?.companyLocation));
+                        if (locations.data.status === 200) {
+                            const locationData = locations?.data?.result?.map(item => ({
+                                externalId: item.externalId,
+                                locationId: item.id
+                            }));
 
-                    if (response?.data?.result?.data?.checkGeofence === 1 && response?.data?.result?.data?.roleName !== 'Admin' && response?.data?.result?.data?.roleName !== 'Owner') {
-                        if (response.data.result?.data?.companyLocation) {
-                            const locations = await getLocations(JSON.parse(response.data.result?.data?.companyLocation));
-                            if (locations.data.status === 200) {
-                                const locationData = locations?.data?.result?.map(item => ({
-                                    externalId: item.externalId,
-                                    locationId: item.id
-                                }));
-
-                                setLoading(true)
-                                if (locationData?.some(loc => loc.externalId === '' || loc.externalId === null || loc.externalId === undefined)) {
-                                    setAlert({
-                                        open: true,
-                                        message: "Geofence data is missing or incomplete for one or more locations. Please configure geofencing for your company's location(s) to proceed.",
-                                        type: "error"
-                                    });
-                                    localStorage.setItem("timeInAllow", 0)
-                                    setLoading(false)
-                                    return;
-                                }
-                                const allowedExternalIds = locationData?.map((loc, i) => {
-                                    return {
-                                        externalId: loc.externalId,
-                                        locationId: loc.locationId
-                                    }
+                            setLoading(true)
+                            if (locationData?.some(loc => loc.externalId === '' || loc.externalId === null || loc.externalId === undefined)) {
+                                setAlert({
+                                    open: true,
+                                    message: "Geofence data is missing or incomplete for one or more locations. Please configure geofencing for your company's location(s) to proceed.",
+                                    type: "error"
                                 });
-                                const isInsideGeofence = await checkGeofenceStatus(allowedExternalIds, response.data.result?.data?.employeeId);
-                                localStorage.setItem("timeInAllow", isInsideGeofence?.isInside ? 1 : 0)
-                                Cookies.set('authToken', response.data.result?.token, { expires: 1 });
-
-                                if (!isInsideGeofence?.isInside) {
-                                    setLoading(false)
-                                    setAlert({
-                                        open: true,
-                                        message: "You are not inside the geofenced area.",
-                                        type: "error"
-                                    });
-                                    return
+                                localStorage.setItem("timeInAllow", 0)
+                                setLoading(false)
+                                return;
+                            }
+                            const allowedExternalIds = locationData?.map((loc, i) => {
+                                return {
+                                    externalId: loc.externalId,
+                                    locationId: loc.locationId
                                 }
+                            });
+                            const isInsideGeofence = await checkGeofenceStatus(allowedExternalIds, response.data.result?.data?.employeeId);
+                            localStorage.setItem("timeInAllow", isInsideGeofence?.isInside ? 1 : 0)
+                            Cookies.set('authToken', response.data.result?.token, { expires: 1 });
+
+                            if (!isInsideGeofence?.isInside) {
+                                setLoading(false)
+                                setAlert({
+                                    open: true,
+                                    message: "You are not inside the geofenced area.",
+                                    type: "error"
+                                });
+                                return
                             }
                         }
-                    } else {
-                        Cookies.set('authToken', response.data.result?.token, { expires: 1 });
-                        localStorage.setItem("timeInAllow", 1)
                     }
-                    const res = await getEmployeeRole(response.data.result?.data?.roleId)
-                    localStorage.setItem('permissions', JSON.stringify(res.data?.result?.rolesActions?.functionalities))
+                } else {
+                    Cookies.set('authToken', response.data.result?.token, { expires: 1 });
+                    localStorage.setItem("timeInAllow", 1)
                 }
+                const res = await getEmployeeRole(response.data.result?.data?.roleId)
+                localStorage.setItem('permissions', JSON.stringify(res.data?.result?.rolesActions?.functionalities))
                 if (!response.data.result?.data?.companyId) {
                     Cookies.set('authToken', response.data.result?.token, { expires: 1 });
                     navigate('/dashboard')

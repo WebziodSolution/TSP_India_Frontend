@@ -55,7 +55,8 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
 
     const { isLoaded } = useJsApiLoader({
         googleMapsApiKey: googleMapAPIKey,
-        libraries: ['drawing']
+        libraries: ['drawing'],
+        version: '3.64'
     });
 
     const handleOpenDialog = (id) => {
