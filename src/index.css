@@ -76,3 +76,8 @@ code {
   background-color: #f5f5f5 !important;
   font-weight: bold !important;
 }
+
+#detectionCanvas {
+  transform: scaleX(-1);
+  /* Flips the canvas drawings to match the video */
+}
