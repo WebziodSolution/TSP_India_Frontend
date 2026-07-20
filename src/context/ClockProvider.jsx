@@ -79,6 +79,9 @@ export const ClockProvider = ({ children, onStatusChange }) => {
             setElapsedSec(diffSec);
             setIsRunning(true);
             localStorage.setItem("timeIn", "true");
+            if (res.data.result.id) {
+                localStorage.setItem("timeInId", res.data.result.id);
+            }
             onStatusChange?.(true);
             return;
         }
@@ -141,7 +144,6 @@ export const ClockProvider = ({ children, onStatusChange }) => {
         if (!id) return;
 
         const response = await updateUserTimeIn(parseInt(id));
-
         if (response?.data?.status === 200) {
             setIsRunning(false);
             setStartUtcMs(null);

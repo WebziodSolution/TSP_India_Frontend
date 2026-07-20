@@ -4,7 +4,7 @@ import axiosInterceptor from "../axiosInterceptor/axiosInterceptor"
 
 export const getDashboardData = async (companyId) => {
     try {
-        const response = axiosInterceptor().get(`${userInOutURL}/getDashboardData/${companyId}`)
+        const response = await axiosInterceptor().get(`${userInOutURL}/getDashboardData/${companyId}`)
         return response
 
     } catch (error) {
@@ -14,7 +14,7 @@ export const getDashboardData = async (companyId) => {
 
 export const generateExcelReport = async (data) => {
     try {
-        const response = axiosInterceptor().get(`${userInOutURL}/generateExcelReport?${data}`)
+        const response = await axiosInterceptor().get(`${userInOutURL}/generateExcelReport?${data}`)
         return response
 
     } catch (error) {
@@ -24,7 +24,7 @@ export const generateExcelReport = async (data) => {
 
 export const getTodayInOutRecords = async () => {
     try {
-        const response = axiosInterceptor().get(`${userInOutURL}/todayrecords`)
+        const response = await axiosInterceptor().get(`${userInOutURL}/todayrecords`)
         return response
 
     } catch (error) {
@@ -34,7 +34,7 @@ export const getTodayInOutRecords = async () => {
 
 export const getAllEntriesWithFilter = async (data) => {
     try {
-        const response = axiosInterceptor().get(`${userInOutURL}/inoutreport?${data}`)
+        const response = await axiosInterceptor().get(`${userInOutURL}/inoutreport?${data}`)
         return response
 
     } catch (error) {
@@ -44,7 +44,7 @@ export const getAllEntriesWithFilter = async (data) => {
 
 export const getAllEntriesByUserId = async (params) => {
     try {
-        const response = axiosInterceptor().get(`${userInOutURL}/getAllRecords?${params}`)
+        const response = await axiosInterceptor().get(`${userInOutURL}/getAllRecords?${params}`)
         return response
     } catch (error) {
         console.log(error)
@@ -53,7 +53,7 @@ export const getAllEntriesByUserId = async (params) => {
 
 export const getAllRecordsGroupByUser = async (params) => {
     try {
-        const response = axiosInterceptor().get(`${userInOutURL}/getAllRecordsGroupByUser?${params}`)
+        const response = await axiosInterceptor().get(`${userInOutURL}/getAllRecordsGroupByUser?${params}`)
         return response
     } catch (error) {
         console.log(error)
@@ -62,7 +62,7 @@ export const getAllRecordsGroupByUser = async (params) => {
 
 export const getUserInOutRecord = async (id) => {
     try {
-        const response = axiosInterceptor().get(`${userInOutURL}/get/${id}`)
+        const response = await axiosInterceptor().get(`${userInOutURL}/get/${id}`)
         return response
     } catch (error) {
         console.log(error)
@@ -71,7 +71,7 @@ export const getUserInOutRecord = async (id) => {
 
 export const getUserLastInOut = async (id) => {
     try {
-        const response = axiosInterceptor().get(`${userInOutURL}/getUserLastInOut/${id}`)
+        const response = await axiosInterceptor().get(`${userInOutURL}/getUserLastInOut/${id}`)
         return response
     } catch (error) {
         console.log(error)
@@ -80,7 +80,7 @@ export const getUserLastInOut = async (id) => {
 
 export const addUserTimeIn = async (id, companyId) => {
     try {
-        const response = axiosInterceptor().post(`${userInOutURL}/create?locationId=${id}&companyId=${companyId}`)
+        const response = await axiosInterceptor().post(`${userInOutURL}/create?locationId=${id}&companyId=${companyId}`)
         return response
 
     } catch (error) {
@@ -90,7 +90,7 @@ export const addUserTimeIn = async (id, companyId) => {
 
 export const updateUserTimeIn = async (id) => {
     try {
-        const response = axiosInterceptor().put(`${userInOutURL}/update/${id}`)
+        const response = await axiosInterceptor().put(`${userInOutURL}/update/${id}`)
         return response
     } catch (error) {
         console.log(error)
@@ -99,7 +99,7 @@ export const updateUserTimeIn = async (id) => {
 
 export const updateUserTimeRecord = async (data) => {
     try {
-        const response = axiosInterceptor().put(`${userInOutURL}/update`, data)
+        const response = await axiosInterceptor().put(`${userInOutURL}/update`, data)
         return response
     } catch (error) {
         console.log(error)
