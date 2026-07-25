@@ -785,7 +785,7 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
                                 render={({ field }) => (
                                     <Select
                                         options={users}
-                                        label={"Emmployee List"}
+                                        label={"Employee List"}
                                         placeholder="Select employees"
                                         value={watch("selectedUserId")?.[0] || []}
                                         onChange={(_, newValue) => {
