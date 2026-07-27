@@ -88,46 +88,49 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab }
         });
         const hrs = Math.floor(totalMinutes / 60);
         const mins = totalMinutes % 60;
-        // const decimal = (Math.round((totalMinutes / 60) * 100) / 100).toFixed(2);
         return `${hrs} hr ${mins} min`;
     };
 
     // ── TAB 0 – User Summary ──────────────────────────────────────────────────
-    // data = array of { id, username, data: [{ rowId, createdOn, timeIn, timeOut,
-    //   regular, overtime, totalHours, workHours, breakTime, status }] }
     if (selectedTab === 0) {
-
         return (
             <div className="overflow-x-auto h-full">
                 <div id="table-container" className="p-3">
-                    {data?.map((user, index) => {
+                    {data?.map((user, userIdx) => {
                         const entries = user.data || [];
                         return (
-                            <div key={user.id || index} className="pdf-page bg-white border border-black p-4 rounded-md">
-
+                            <div key={user.id || userIdx} className="pdf-page bg-white border border-black p-4 rounded-md">
                                 {/* Header */}
                                 {pageHeader('USER SUMMARY')}
 
                                 {/* Divider */}
                                 <div className="border-t border-black my-4" />
 
-                                {/* Employee name */}
-                                {/* <div className="text-center font-bold text-lg text-gray-900 mb-3 capitalize">
-                                    {user.username} - {user.department}
-                                </div> */}
+                                {/* Employee name / Stats */}
                                 <div className='flex justify-start items-center mb-5'>
                                     <div className='grow'>
-                                        <h3 className="text-lg font-semibold text-black capitalize text-start">{user.username} - {user.department}</h3>
+                                        <h3 className="text-lg font-semibold text-black capitalize text-start">{user?.username || user?.userName} - {user?.department}</h3>
                                     </div>
                                     <div>
-                                        <p className="text-lg font-medium text-black capitalize text-end">
-                                            Present: {user.presentCount || '0'} &nbsp;&nbsp;&nbsp; Absent: {user.absentCount || '0'} &nbsp;&nbsp;&nbsp; Weekly-Off: {user.weeklyOffCount || '0'} &nbsp;&nbsp;&nbsp; Holiday: {user.holidayCount || '0'}
+                                        <p className="text-sm font-medium text-black capitalize text-end">
+                                            Present: {user?.presentCount || '0'} &nbsp;&nbsp;&nbsp; Absent: {user?.absentCount || '0'} &nbsp;&nbsp;&nbsp; Weekly-Off: {user?.weeklyOffCount || '0'} &nbsp;&nbsp;&nbsp; Holiday: {user?.holidayCount || '0'}
                                         </p>
                                     </div>
                                 </div>
 
-                                {/* Summary table – same columns as the UI */}
+                                {/* Table */}
                                 <table className="min-w-full border-collapse border border-black pdf-table">
+                                    <colgroup>
+                                        <col style={{ width: '12%' }} />
+                                        <col style={{ width: '10%' }} />
+                                        <col style={{ width: '11%' }} />
+                                        <col style={{ width: '11%' }} />
+                                        <col style={{ width: '13%' }} />
+                                        <col style={{ width: '11%' }} />
+                                        <col style={{ width: '11%' }} />
+                                        <col style={{ width: '15%' }} />
+                                        <col style={{ width: '6%' }} />
+                                    </colgroup>
                                     <thead>
                                         <tr>
                                             {['Day', 'Regular (HR)', 'Time In', 'Time Out', 'Total Hours', 'Break Time', 'OT', 'Work Hours', 'Status'].map(col => (
@@ -138,43 +141,49 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab }
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {entries.map((row, i) => {
-                                            const timeIn = row?.timeIn ? parseDDMMYYYYTime(row.timeIn) : null;
-                                            const timeOut = row?.timeOut ? parseDDMMYYYYTime(row.timeOut) : null;
-                                            const day = handleFormateUTCDateToLocalDate(row.createdOn);
-
-                                            return (
-                                                <tr key={i} className="border border-black">
-                                                    <td className="border border-black text-center text-sm h-10">{day}</td>
-                                                    <td className="border border-black text-center text-sm h-10">{row.regular || '-'}</td>
-                                                    <td className="border border-black text-center text-sm h-10">
-                                                        {timeIn ? timeIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
-                                                    </td>
-                                                    <td className="border border-black text-center text-sm h-10">
-                                                        {timeOut ? timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
-                                                    </td>
-                                                    <td className="border border-black text-center text-sm h-10">{row.totalHours || '-'}</td>
-                                                    <td className="border border-black text-center text-sm h-10">{row.breakTime || '-'}</td>
-                                                    <td className="border border-black text-center text-sm h-10">{row.overtime || '-'}</td>
-                                                    <td className="border border-black text-center text-sm h-10">{row.workHours || '-'}</td>
-                                                    <td className="border border-black text-center text-sm h-10">{renderStatus(row.status)}</td>
-                                                </tr>
-                                            );
-                                        })}
-
-                                        {/* Totals row */}
-                                        {entries.length > 0 && (
-                                            <tr className="border border-black bg-gray-100 font-bold">
-                                                <td className="border border-black text-center text-sm h-10">Total</td>
-                                                <td className="border border-black text-center text-sm h-10">{sumTimeField(entries, 'regular')}</td>
-                                                <td className="border border-black text-center text-sm h-10">-</td>
-                                                <td className="border border-black text-center text-sm h-10">-</td>
-                                                <td className="border border-black text-center text-sm h-10">{sumTimeField(entries, 'totalHours')}</td>
-                                                <td className="border border-black text-center text-sm h-10">-</td>
-                                                <td className="border border-black text-center text-sm h-10">{sumTimeField(entries, 'overtime')}</td>
-                                                <td className="border border-black text-center text-sm h-10">{sumTimeField(entries, 'workHours')}</td>
-                                                <td className="border border-black text-center text-sm h-10">-</td>
+                                        {entries.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={9} className="text-center py-4 text-gray-500">No attendance records found.</td>
                                             </tr>
+                                        ) : (
+                                            <>
+                                                {entries.map((row, i) => {
+                                                    const timeIn = row?.timeIn ? parseDDMMYYYYTime(row.timeIn) : null;
+                                                    const timeOut = row?.timeOut ? parseDDMMYYYYTime(row.timeOut) : null;
+                                                    const day = handleFormateUTCDateToLocalDate(row.createdOn);
+
+                                                    return (
+                                                        <tr key={i} className="border border-black">
+                                                            <td className="border border-black text-center text-sm h-10">{day}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{row.regular || '-'}</td>
+                                                            <td className="border border-black text-center text-sm h-10">
+                                                                {timeIn ? timeIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
+                                                            </td>
+                                                            <td className="border border-black text-center text-sm h-10">
+                                                                {timeOut ? timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
+                                                            </td>
+                                                            <td className="border border-black text-center text-sm h-10">{row.totalHours || '-'}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{row.breakTime || '-'}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{row.overtime || '-'}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{row.workHours || '-'}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{renderStatus(row.status)}</td>
+                                                        </tr>
+                                                    );
+                                                })}
+
+                                                {/* Totals row */}
+                                                <tr className="border border-black bg-gray-100 font-bold">
+                                                    <td className="border border-black text-center text-sm h-10">Total</td>
+                                                    <td className="border border-black text-center text-sm h-10">{sumTimeField(entries, 'regular')}</td>
+                                                    <td className="border border-black text-center text-sm h-10">-</td>
+                                                    <td className="border border-black text-center text-sm h-10">-</td>
+                                                    <td className="border border-black text-center text-sm h-10">{sumTimeField(entries, 'totalHours')}</td>
+                                                    <td className="border border-black text-center text-sm h-10">-</td>
+                                                    <td className="border border-black text-center text-sm h-10">{sumTimeField(entries, 'overtime')}</td>
+                                                    <td className="border border-black text-center text-sm h-10">{sumTimeField(entries, 'workHours')}</td>
+                                                    <td className="border border-black text-center text-sm h-10">-</td>
+                                                </tr>
+                                            </>
                                         )}
                                     </tbody>
                                 </table>
@@ -199,7 +208,6 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab }
     });
     const result = Array.from(map.values());
 
-
     const detailedHeader = () => (
         <thead>
             <tr>
@@ -213,74 +221,95 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab }
     return (
         <div className="overflow-x-auto h-full">
             <div id="table-container" className="p-3">
-                {result?.map((user, index) => (
-                    <div key={user.userId || index} className="pdf-page bg-white border border-black p-4 rounded-md">
+                {result?.map((user, userIdx) => {
+                    const records = user.records || [];
+                    return (
+                        <div key={user.userId || userIdx} className="pdf-page bg-white border border-black p-4 rounded-md">
+                            {/* Header */}
+                            {pageHeader('DETAILED REPORT')}
 
-                        {/* Header */}
-                        {pageHeader('DETAILED REPORT')}
+                            {/* Divider */}
+                            <div className="border-t border-black my-4" />
 
-                        {/* Divider */}
-                        <div className="border-t border-black my-4" />
+                            {/* Employee name */}
+                            <div className="text-center font-bold text-lg text-gray-900 mb-3 capitalize">
+                                {user?.username || user?.userName}
+                            </div>
 
-                        {/* Employee name */}
-                        <div className="text-center font-bold text-lg text-gray-900 mb-3">
-                            {user?.firstName} {user?.lastName}
-                        </div>
-
-                        {/* Detailed table */}
-                        <table className="min-w-full border-collapse border border-black pdf-table">
-                            {detailedHeader()}
-                            <tbody>
-                                {user?.records?.map((record, i) => {
-                                    const timeIn = record?.timeIn ? parseDDMMYYYYTime(record.timeIn) : null;
-                                    const timeOut = record?.timeOut ? parseDDMMYYYYTime(record.timeOut) : null;
-                                    const createdOn = handleFormateUTCDateToLocalDate(record?.createdOn);
-
-                                    return (
-                                        <tr key={i} className="border border-black">
-                                            <td className="border border-black text-center text-sm h-10">{createdOn}</td>
-                                            <td className="border border-black text-center text-sm h-10">{record?.regular || '-'}</td>
-                                            <td className="border border-black text-center text-sm h-10">
-                                                {timeIn ? timeIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
-                                            </td>
-                                            <td className="border border-black text-center text-sm h-10">
-                                                {timeOut ? timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
-                                            </td>
-                                            <td className="border border-black text-center text-sm h-10">{record?.totalHours || '-'}</td>
-                                            <td className="border border-black text-center text-sm h-10">{record?.breakTime || '-'}</td>
-                                            <td className="border border-black text-center text-sm h-10">{record?.overtime || '-'}</td>
-                                            <td className="border border-black text-center text-sm h-10">{record?.workHours || '-'}</td>
-                                            <td className="border border-black text-center text-sm h-10">{renderStatus(record?.status)}</td>
+                            {/* Detailed table */}
+                            <table className="min-w-full border-collapse border border-black pdf-table">
+                                <colgroup>
+                                    <col style={{ width: '12%' }} />
+                                    <col style={{ width: '10%' }} />
+                                    <col style={{ width: '11%' }} />
+                                    <col style={{ width: '11%' }} />
+                                    <col style={{ width: '13%' }} />
+                                    <col style={{ width: '11%' }} />
+                                    <col style={{ width: '11%' }} />
+                                    <col style={{ width: '15%' }} />
+                                    <col style={{ width: '6%' }} />
+                                </colgroup>
+                                {detailedHeader()}
+                                <tbody>
+                                    {records.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={9} className="text-center py-4 text-gray-500">No attendance records found.</td>
                                         </tr>
-                                    );
-                                })}
+                                    ) : (
+                                        <>
+                                            {records.map((record, i) => {
+                                                const timeIn = record?.timeIn ? parseDDMMYYYYTime(record.timeIn) : null;
+                                                const timeOut = record?.timeOut ? parseDDMMYYYYTime(record.timeOut) : null;
+                                                const createdOn = handleFormateUTCDateToLocalDate(record?.createdOn);
 
-                                {/* Totals row */}
-                                <tr className="border border-black bg-gray-50 font-bold">
-                                    <td className="border border-black text-sm h-10 text-end pr-5" colSpan={4}>
-                                        Total:
-                                    </td>
-                                    <td className="border border-black text-center text-sm h-10">
-                                        {sumTimeField(user?.records, 'totalHours')}
-                                    </td>
-                                    <td className="border border-black text-center text-sm h-10">
-                                        -
-                                    </td>
-                                    <td className="border border-black text-center text-sm h-10">
-                                        {sumTimeField(user?.records, 'overtime')}
-                                    </td>
-                                    <td className="border border-black text-center text-sm h-10">
-                                        {sumTimeField(user?.records, 'workHours')}
-                                    </td>
-                                    <td className="border border-black text-center text-sm h-10">-</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                ))}
+                                                return (
+                                                    <tr key={i} className="border border-black">
+                                                        <td className="border border-black text-center text-sm h-10">{createdOn}</td>
+                                                        <td className="border border-black text-center text-sm h-10">{record?.regular || '-'}</td>
+                                                        <td className="border border-black text-center text-sm h-10">
+                                                            {timeIn ? timeIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
+                                                        </td>
+                                                        <td className="border border-black text-center text-sm h-10">
+                                                            {timeOut ? timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
+                                                        </td>
+                                                        <td className="border border-black text-center text-sm h-10">{record?.totalHours || '-'}</td>
+                                                        <td className="border border-black text-center text-sm h-10">{record?.breakTime || '-'}</td>
+                                                        <td className="border border-black text-center text-sm h-10">{record?.overtime || '-'}</td>
+                                                        <td className="border border-black text-center text-sm h-10">{record?.workHours || '-'}</td>
+                                                        <td className="border border-black text-center text-sm h-10">{renderStatus(record?.status)}</td>
+                                                    </tr>
+                                                );
+                                            })}
+
+                                            {/* Totals row */}
+                                            <tr className="border border-black bg-gray-50 font-bold">
+                                                <td className="border border-black text-sm h-10 text-end pr-5" colSpan={4}>
+                                                    Total:
+                                                </td>
+                                                <td className="border border-black text-center text-sm h-10">
+                                                    {sumTimeField(records, 'totalHours')}
+                                                </td>
+                                                <td className="border border-black text-center text-sm h-10">
+                                                    -
+                                                </td>
+                                                <td className="border border-black text-center text-sm h-10">
+                                                    {sumTimeField(records, 'overtime')}
+                                                </td>
+                                                <td className="border border-black text-center text-sm h-10">
+                                                    {sumTimeField(records, 'workHours')}
+                                                </td>
+                                                <td className="border border-black text-center text-sm h-10">-</td>
+                                            </tr>
+                                        </>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
-}
+};
 
 export default DetailedPDFTable

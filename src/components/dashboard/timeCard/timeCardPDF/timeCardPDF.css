@@ -5,6 +5,17 @@
     page-break-after: always;
     /* legacy */
     break-inside: avoid;
+    
+    /* Fixed A4 width and min-height at 96 DPI */
+    width: 794px !important;
+    min-height: 1123px !important;
+    padding: 30px !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    background-color: #ffffff !important;
+    position: relative !important;
 }
 
 /* Don't create a blank last page */
@@ -32,4 +43,8 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding: 6px 4px !important;
+  font-size: 11px !important;
+  height: 28px !important;
+  vertical-align: middle;
 }

@@ -8,7 +8,6 @@ import { setAlert } from '../../../redux/commonReducers/commonReducers';
 import CustomIcons from '../../common/icons/CustomIcons';
 import { faceRecognitionAPIBaseURL, faceRecognitionModelURL } from '../../../config/apiConfig/apiConfig';
 import { useNavigate } from 'react-router-dom';
-import { speakMessage } from '../../../service/common/commonService';
 
 const BootstrapDialog = styled(Components.Dialog)(({ theme }) => ({
     '& .MuiDialogContent-root': {
@@ -43,8 +42,6 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
     const countdownActiveRef = useRef(false);
     const faceDetectionIntervalRef = useRef(null);
     const latestDescriptorRef = useRef(null);
-    const livenessVerifiedRef = useRef(false);
-    const lastSpokenTimeRef = useRef(0);
 
     const [currentStream, setCurrentStream] = useState(null);
     const [capturedImageDataURL, setCapturedImageDataURL] = useState(null);
@@ -194,49 +191,6 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
                 scaledFaceBox.y < scaledFrameY + scaledFrameHeight - relaxedMarginY;
 
             if (isWithinFrame) {
-                const isLogin = type === "login";
-                // Liveness check using head turning (only for login)
-                if (isLogin && !livenessVerifiedRef.current) {
-                    const noseTip = landmarks.positions[30];
-                    const leftEdge = landmarks.positions[0];
-                    const rightEdge = landmarks.positions[16];
-
-                    const getEuclideanDistance = (pt1, pt2) => {
-                        return Math.sqrt(Math.pow(pt1.x - pt2.x, 2) + Math.pow(pt1.y - pt2.y, 2));
-                    };
-
-                    const leftDist = getEuclideanDistance(noseTip, leftEdge);
-                    const rightDist = getEuclideanDistance(noseTip, rightEdge);
-                    const yawRatio = leftDist / (leftDist + rightDist);
-
-                    if (yawRatio < 0.43 || yawRatio > 0.57) {
-                        livenessVerifiedRef.current = true;
-                        faceFrameRef.current.style.borderColor = "#22c55e"; // Green
-                        faceFrameRef.current.querySelectorAll('.corner').forEach(c => c.style.borderColor = "#22c55e");
-                        showMessage(setRegisterMessage, 'Liveness verified! Please look straight.', 'success');
-                        speakMessage('Liveness verified! Please look straight.');
-                    } else {
-                        faceFrameRef.current.style.borderColor = "#eab308"; // Yellow
-                        faceFrameRef.current.querySelectorAll('.corner').forEach(c => c.style.borderColor = "#eab308");
-
-                        const statusMsg = "Please TURN HEAD slightly Left or Right";
-                        showMessage(setRegisterMessage, statusMsg, 'warning');
-
-                        if (Date.now() - lastSpokenTimeRef.current > 5000) {
-                            speakMessage(statusMsg);
-                            lastSpokenTimeRef.current = Date.now();
-                        }
-
-                        faceAlignedRef.current = false;
-                        if (countdownIntervalRef.current) {
-                            clearInterval(countdownIntervalRef.current);
-                            countdownIntervalRef.current = null;
-                            countdownActiveRef.current = false;
-                        }
-                        return;
-                    }
-                }
-
                 faceAlignedRef.current = true;
                 faceFrameRef.current.style.borderColor = "#22c55e"; // Green
                 faceFrameRef.current.querySelectorAll('.corner').forEach(c => c.style.borderColor = "#22c55e");
@@ -285,8 +239,6 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
         setCapturedImageDataURL(null);
         setFaceDescriptor(null);
         latestDescriptorRef.current = null;
-        livenessVerifiedRef.current = false;
-        lastSpokenTimeRef.current = 0;
         setIsPhotoAlreadyCaptured(false); // Ensure this is false to restart detection
         countdownActiveRef.current = false;
 
@@ -381,8 +333,6 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
         setCapturedImageDataURL(null);
         setFaceDescriptor(null);
         latestDescriptorRef.current = null;
-        livenessVerifiedRef.current = false;
-        lastSpokenTimeRef.current = 0;
         setIsPhotoAlreadyCaptured(false);
     };
 
@@ -471,8 +421,6 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
         setCapturedImageDataURL(null);
         setFaceDescriptor(null);
         latestDescriptorRef.current = null;
-        livenessVerifiedRef.current = false;
-        lastSpokenTimeRef.current = 0;
         setIsPhotoAlreadyCaptured(false); // This state change is key for restarting detection
         countdownActiveRef.current = false;
 
@@ -696,8 +644,3 @@ const mapDispatchToProps = {
 };
 
 export default connect(null, mapDispatchToProps)(FaceRegistration);
-
-// faceDescriptorInput.value [-0.20307719707489014,0.08489348739385605,0.09423123300075531,-0.04917548596858978,-0.011448781937360764,-0.09727434813976288,-0.04818405583500862,-0.0314621701836586,0.09653551876544952,-0.04819248989224434,0.2129346877336502,-0.08544760197401047,-0.18603187799453735,-0.07560791820287704,-0.04770626500248909,0.08892910182476044,-0.14932917058467865,-0.16694702208042145,-0.10572270303964615,-0.12741591036319733,0.05167757719755173,-0.03788996487855911,-0.04347049072384834,0.057397641241550446,-0.22920803725719452,-0.3402428925037384,-0.08062141388654709,-0.10273782908916473,0.01164971012622118,-0.13035665452480316,-0.046662259846925735,0.04977964609861374,-0.197633758187294,-0.05426344648003578,0.011346585117280483,0.0893159955739975,0.10185516625642776,0.011521969921886921,0.16923312842845917,0.00038316677091643214,-0.13229191303253174,0.01890481635928154,0.1187531054019928,0.3004947900772095,0.19400173425674438,0.13401690125465393,0.00931297056376934,0.026701023802161217,0.1396358758211136,-0.22519400715827942,0.12019090354442596,0.12482412159442902,0.14514024555683136,0.07571904361248016,0.11791591346263885,-0.19271455705165863,-0.008687866851687431,0.07900340855121613,-0.13239970803260803,0.12837688624858856,-0.0008295245352201164,-0.08938662707805634,-0.004948951303958893,-0.02468997985124588,0.22155222296714783,0.10682907700538635,-0.1205705851316452,-0.05273295193910599,0.16775883734226227,-0.11143025755882263,0.033432092517614365,0.04068842902779579,-0.0754178911447525,-0.121733658015728,-0.2565939724445343,0.1011243686079979,0.44103869795799255,0.142691507935524,-0.2005525827407837,0.048655252903699875,-0.07192613184452057,-0.05994788929820061,0.051672834903001785,0.024576961994171143,-0.18102702498435974,0.05892806127667427,-0.11263203620910645,0.06589040160179138,0.22066165506839752,0.1084270104765892,-0.018233541399240494,0.17953333258628845,-0.04684571176767349,0.039075903594493866,0.05055942386388779,0.026941604912281036,-0.1768411546945572,-0.04030369222164154,-0.05411892756819725,-0.015518746338784695,0.07569931447505951,-0.10832324624061584,-0.012202106416225433,0.08130376040935516,-0.16637150943279266,0.08600275218486786,-0.019971415400505066,0.017994349822402,-0.10247708112001419,0.12386839836835861,-0.05932646244764328,-0.019221697002649307,0.08295237272977829,-0.2375868558883667,0.15785646438598633,0.1580338180065155,-0.003705449402332306,0.16316203773021698,0.0937310978770256,0.032121170312166214,0.047959521412849426,0.018765168264508247,-0.05763811990618706,-0.0917239710688591,0.053658321499824524,-0.036152973771095276,0.14981886744499207,0.07738353312015533]
-
-
-// imageBlob Blob {size: 136979, type: 'image/jpeg'}

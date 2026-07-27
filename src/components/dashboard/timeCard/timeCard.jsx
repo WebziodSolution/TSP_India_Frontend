@@ -883,7 +883,7 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             </div>
 
             {showPdfContent && (
-                <div className='absolute top-0 left-0 z-[-1] w-[180vh] opacity-0'>
+                <div className='absolute top-0 left-0 z-[-1] w-[800px] opacity-0'>
                     <DetailedPDFTable data={rows} companyInfo={companyInfo} startDate={watch("startDate")} endDate={watch("endDate")} selectedTab={selectedTab} />
                 </div>
             )}

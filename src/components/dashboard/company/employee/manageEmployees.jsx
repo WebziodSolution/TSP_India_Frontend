@@ -100,7 +100,7 @@ const ManageEmployees = ({ handleSetTitle, setAlert }) => {
                         </Components.Avatar>
 
                         <p className='text-sm'>
-                            {params?.row?.firstName} {params?.row?.lastName}<br />
+                            {params?.row?.firstName}  {params?.row?.middleName} {params?.row?.lastName}<br />
                             <span className='text-xs'>
                                 {params?.row?.email}
                             </span>
@@ -109,13 +109,13 @@ const ManageEmployees = ({ handleSetTitle, setAlert }) => {
                 );
             },
         },
-        {
-            field: 'gender',
-            headerName: 'Gender',
-            headerClassName: 'uppercase',
-            flex: 1,
-            minWidth: 90
-        },
+        // {
+        //     field: 'gender',
+        //     headerName: 'Gender',
+        //     headerClassName: 'uppercase',
+        //     flex: 1,
+        //     minWidth: 90
+        // },
         {
             field: 'shiftType',
             headerName: 'Shift Type',
