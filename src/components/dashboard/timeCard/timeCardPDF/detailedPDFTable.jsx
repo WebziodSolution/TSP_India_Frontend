@@ -20,7 +20,7 @@ const renderStatus = (status) => {
     return <span style={{ color, fontWeight }}>{status || '-'}</span>;
 };
 
-const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab }) => {
+const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, isDetail = true }) => {
     // ── helpers shared by both modes ──────────────────────────────────────────
     const parseDDMMYYYYTime = (s) => {
         if (!s) return null;
@@ -32,6 +32,91 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab }
         if (ampm === "PM" && hh < 12) hh += 12;
         if (ampm === "AM" && hh === 12) hh = 0;
         return new Date(yyyy, mm - 1, dd, hh, min, ss);
+    };
+
+    const parseDDMMYYYY = (s) => {
+        if (!s || typeof s !== "string") return null;
+        const [dd, mm, yyyy] = s.split("/").map((v) => parseInt(v, 10));
+        if (!dd || !mm || !yyyy) return null;
+        return new Date(yyyy, mm - 1, dd);
+    };
+
+    const getProcessedEntries = (entries, isDetail) => {
+        if (isDetail) {
+            return entries;
+        }
+
+        const groups = {};
+        entries.forEach(row => {
+            if (!row.createdOn) return;
+            const datePart = row.createdOn.split(',')[0].trim();
+            if (!groups[datePart]) {
+                groups[datePart] = [];
+            }
+            groups[datePart].push(row);
+        });
+
+        const consolidated = [];
+        Object.keys(groups).forEach(datePart => {
+            const dayRows = groups[datePart];
+            if (dayRows.length === 1) {
+                consolidated.push(dayRows[0]);
+                return;
+            }
+
+            const sortedRows = [...dayRows].sort((a, b) => {
+                if (!a.timeIn) return 1;
+                if (!b.timeIn) return -1;
+                return a.timeIn.localeCompare(b.timeIn);
+            });
+
+            const baseRow = { ...sortedRows[0] };
+            const firstWithCalculations = dayRows.find(r => r.totalHours !== "") || baseRow;
+
+            baseRow.regular = firstWithCalculations.regular;
+            baseRow.totalHours = firstWithCalculations.totalHours;
+            baseRow.breakTime = firstWithCalculations.breakTime;
+            baseRow.overtime = firstWithCalculations.overtime;
+            baseRow.workHours = firstWithCalculations.workHours;
+            baseRow.status = firstWithCalculations.status;
+
+            let earliestTimeIn = null;
+            let earliestTimeInStr = null;
+            let latestTimeOut = null;
+            let latestTimeOutStr = null;
+
+            dayRows.forEach(row => {
+                if (row.timeIn) {
+                    const parsedIn = parseDDMMYYYYTime(row.timeIn);
+                    if (parsedIn && (!earliestTimeIn || parsedIn < earliestTimeIn)) {
+                        earliestTimeIn = parsedIn;
+                        earliestTimeInStr = row.timeIn;
+                    }
+                }
+                if (row.timeOut) {
+                    const parsedOut = parseDDMMYYYYTime(row.timeOut);
+                    if (parsedOut && (!latestTimeOut || parsedOut > latestTimeOut)) {
+                        latestTimeOut = parsedOut;
+                        latestTimeOutStr = row.timeOut;
+                    }
+                }
+            });
+
+            if (earliestTimeInStr) baseRow.timeIn = earliestTimeInStr;
+            if (latestTimeOutStr) baseRow.timeOut = latestTimeOutStr;
+
+            consolidated.push(baseRow);
+        });
+
+        consolidated.sort((a, b) => {
+            const dateA = parseDDMMYYYY(a.createdOn?.split(',')[0].trim());
+            const dateB = parseDDMMYYYY(b.createdOn?.split(',')[0].trim());
+            if (!dateA) return 1;
+            if (!dateB) return -1;
+            return dateA - dateB;
+        });
+
+        return consolidated;
     };
 
     // ── Shared page header (logo / company / period / report title) ────────────
@@ -97,7 +182,7 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab }
             <div className="overflow-x-auto h-full">
                 <div id="table-container" className="p-3">
                     {data?.map((user, userIdx) => {
-                        const entries = user.data || [];
+                        const entries = getProcessedEntries(user.data || [], isDetail);
                         return (
                             <div key={user.id || userIdx} className="pdf-page bg-white border border-black p-4 rounded-md">
                                 {/* Header */}
@@ -150,23 +235,24 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab }
                                                 {entries.map((row, i) => {
                                                     const timeIn = row?.timeIn ? parseDDMMYYYYTime(row.timeIn) : null;
                                                     const timeOut = row?.timeOut ? parseDDMMYYYYTime(row.timeOut) : null;
-                                                    const day = handleFormateUTCDateToLocalDate(row.createdOn);
+                                                    const isSecondary = row?.totalHours === "";
+                                                    const day = isSecondary ? "" : handleFormateUTCDateToLocalDate(row.createdOn);
 
                                                     return (
                                                         <tr key={i} className="border border-black">
                                                             <td className="border border-black text-center text-sm h-10">{day}</td>
-                                                            <td className="border border-black text-center text-sm h-10">{row.regular || '-'}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : (row.regular || '-')}</td>
                                                             <td className="border border-black text-center text-sm h-10">
                                                                 {timeIn ? timeIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
                                                             </td>
                                                             <td className="border border-black text-center text-sm h-10">
                                                                 {timeOut ? timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
                                                             </td>
-                                                            <td className="border border-black text-center text-sm h-10">{row.totalHours || '-'}</td>
-                                                            <td className="border border-black text-center text-sm h-10">{row.breakTime || '-'}</td>
-                                                            <td className="border border-black text-center text-sm h-10">{row.overtime || '-'}</td>
-                                                            <td className="border border-black text-center text-sm h-10">{row.workHours || '-'}</td>
-                                                            <td className="border border-black text-center text-sm h-10">{renderStatus(row.status)}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : (row.totalHours || '-')}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : (row.breakTime || '-')}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : (row.overtime || '-')}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : (row.workHours || '-')}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : renderStatus(row.status)}</td>
                                                         </tr>
                                                     );
                                                 })}

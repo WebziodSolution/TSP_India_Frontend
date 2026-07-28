@@ -52,13 +52,15 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
     const userInfo = JSON.parse(localStorage.getItem("userInfo"))
 
     const [selectedTab, setSelectedTab] = useState(0);
-    const [loadingPdf, setLoadingPdf] = useState(false);
+    const [loadingDetailPdf, setLoadingDetailPdf] = useState(false);
+    const [loadingDownloadPdf, setLoadingDownloadPdf] = useState(false);
 
     const [users, setUsers] = useState([])
     const [rows, setRow] = useState([])
     const [companyInfo, setCompanyInfo] = useState()
 
     const [showPdfContent, setShowPdfContent] = useState(false);
+    const [isDetailPdf, setIsDetailPdf] = useState(true);
     const [department, setDepartment] = useState([]);
     const [openInOutModel, setOpenInOutModel] = useState(false);
     const [bulkInOutModel, setBulkInOutModel] = useState(false);
@@ -638,42 +640,19 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             // eslint-disable-next-line no-unused-vars
             const { maxWidth, ...rest } = col;
 
-            if (col.field === 'regular') {
-                return { ...rest, renderCell: (params) => <div>{params?.row?.regular}</div> };
-            }
-            if (col.field === 'breakTime') {
-                return { ...rest, renderCell: (params) => <div>{params.row.breakTime || '-'}</div> };
-            }
-            if (col.field === 'workHours') {
-                return { ...rest, renderCell: (params) => <div>{params.row.workHours || '00:00'}</div> };
-            }
-            if (col.field === 'ot') {
-                return { ...rest, renderCell: (params) => <div>{params.row.overtime || '00:00'}</div> };
-            }
-            if (col.field === 'total') {
-                return { ...rest, renderCell: (params) => <div>{params.row.totalHours || '00:00'}</div> };
-            }
-            if (col.field === 'status') {
+            // Wrap renderCell for non-timeIn/timeOut/action columns to hide them on secondary rows
+            if (col.field !== 'timeIn' && col.field !== 'timeOut' && col.field !== 'action') {
+                const originalRender = col.renderCell;
                 return {
                     ...rest,
                     renderCell: (params) => {
-                        const status = params.row?.status;
-                        let color = 'inherit';
-                        let fontWeight = 'normal';
-                        if (status === 'A') {
-                            color = '#ff0000';
-                            fontWeight = 'bold';
-                        } else if (status === 'W') {
-                            color = '#19ff13';
-                            fontWeight = 'bold';
-                        } else if (status === 'H') {
-                            color = '#ff8443';
-                            fontWeight = 'bold';
-                        } else if (status === 'PW') {
-                            color = '#0303fc';
-                            fontWeight = 'bold';
+                        if (params.row?.totalHours === "") {
+                            return <div></div>;
                         }
-                        return <div style={{ color, fontWeight }}>{status || "-"}</div>;
+                        if (originalRender) {
+                            return originalRender(params);
+                        }
+                        return <div>{params.row[col.field]}</div>;
                     }
                 };
             }
@@ -691,20 +670,27 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
     };
 
     // --- PDF generation ---
-    const generatePDF = async () => {
+    const handleGeneratePdfClick = (detail) => {
+        setIsDetailPdf(detail);
         setShowPdfContent(true);
-        setLoadingPdf(true);
+        if (detail) {
+            setLoadingDetailPdf(true);
+        } else {
+            setLoadingDownloadPdf(true);
+        }
 
         setTimeout(async () => {
-            const pdf = new jsPDF("p", "mm", "a4");
             const pages = document.querySelectorAll(".pdf-page");
 
             if (!pages.length) {
                 setShowPdfContent(false);
-                setLoadingPdf(false);
+                setLoadingDetailPdf(false);
+                setLoadingDownloadPdf(false);
                 return;
             }
 
+            // 1. Render all pages to canvases and calculate dynamic heights
+            const renderedPages = [];
             for (let i = 0; i < pages.length; i++) {
                 const page = pages[i];
                 const canvas = await html2canvas(page, {
@@ -713,10 +699,25 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
                     backgroundColor: "#ffffff",
                 });
                 const imgData = canvas.toDataURL("image/jpeg", 0.75);
-                const imgWidth = 190;
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                if (i > 0) pdf.addPage();
-                pdf.addImage(imgData, "JPEG", 10, 10, imgWidth, imgHeight, undefined, "FAST");
+                
+                // Calculate dimensions in mm (width is fixed at 210mm)
+                const imgWidthMM = 210;
+                const imgHeightMM = (canvas.height * imgWidthMM) / canvas.width;
+                
+                renderedPages.push({ imgData, width: imgWidthMM, height: imgHeightMM });
+            }
+
+            // 2. Initialize jsPDF using the first page's dynamic dimensions
+            const firstPage = renderedPages[0];
+            const pdf = new jsPDF("p", "mm", [firstPage.width, firstPage.height]);
+
+            // 3. Add images to PDF
+            for (let i = 0; i < renderedPages.length; i++) {
+                const rendered = renderedPages[i];
+                if (i > 0) {
+                    pdf.addPage([rendered.width, rendered.height]);
+                }
+                pdf.addImage(rendered.imgData, "JPEG", 0, 0, rendered.width, rendered.height, undefined, "FAST");
             }
 
             pdf.save(
@@ -724,14 +725,16 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             );
 
             setShowPdfContent(false);
-            setLoadingPdf(false);
+            setLoadingDetailPdf(false);
+            setLoadingDownloadPdf(false);
         }, 300);
     };
 
     const actionButtons = () => {
         return (
-            <div className='flex justify-start items-center gap-3 w-[33rem]'>
-                <Button type={`button`} useFor={'error'} text={'Download PDF'} isLoading={loadingPdf} onClick={() => generatePDF()} startIcon={<CustomIcons iconName="fa-solid fa-file-pdf" css="h-5 w-5" />} />
+            <div className='flex justify-end items-center gap-3 w-[42rem]'>
+                <Button type={`button`} useFor={'info'} text={'Detail PDF'} isLoading={loadingDetailPdf} onClick={() => handleGeneratePdfClick(true)} startIcon={<CustomIcons iconName="fa-solid fa-file-pdf" css="h-5 w-5" />} />
+                <Button type={`button`} useFor={'error'} text={'Download PDF'} isLoading={loadingDownloadPdf} onClick={() => handleGeneratePdfClick(false)} startIcon={<CustomIcons iconName="fa-solid fa-file-pdf" css="h-5 w-5" />} />
                 <PermissionWrapper
                     functionalityName="Time Card"
                     moduleName="Clock-In-Out"
@@ -884,7 +887,7 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
 
             {showPdfContent && (
                 <div className='absolute top-0 left-0 z-[-1] w-[800px] opacity-0'>
-                    <DetailedPDFTable data={rows} companyInfo={companyInfo} startDate={watch("startDate")} endDate={watch("endDate")} selectedTab={selectedTab} />
+                    <DetailedPDFTable data={rows} companyInfo={companyInfo} startDate={watch("startDate")} endDate={watch("endDate")} selectedTab={selectedTab} isDetail={isDetailPdf} />
                 </div>
             )}
             <AddClockInOut open={openInOutModel} handleClose={handleCloseInOutModal} employeeList={users} getRecords={handleCallFilterAPI} id={clockInOutId} />
