@@ -591,12 +591,10 @@ export async function playBeep() {
         audio.preload = 'auto';
         audio.currentTime = 0;
         await audio.play();
-        console.log("Beep played");
     } catch (err) {
         console.warn("Beep playback failed:", err);
     }
 }
-
 export const speakMessage = (message) => {
     try {
         if (!window.speechSynthesis) {
@@ -604,22 +602,20 @@ export const speakMessage = (message) => {
             return;
         }
 
-        const utterance = new SpeechSynthesisUtterance(message);
+        // Cancel any active/stuck speech synthesis queues
+        window.speechSynthesis.cancel();
 
-        // Pick a female English voice if available
+        const utterance = new SpeechSynthesisUtterance(message);
         const voices = window.speechSynthesis.getVoices();
-        console.log("Available voices:", voices);
 
         let selectedVoice = voices.find(
             (v) => v.lang.toLowerCase().startsWith("en") && /female/i.test(v.name)
         );
 
         if (!selectedVoice) {
-            // Fallback: any English voice
             selectedVoice = voices.find((v) => v.lang.toLowerCase().startsWith("en"));
         }
 
-        // Final fallback: first available voice
         if (!selectedVoice && voices.length > 0) {
             selectedVoice = voices[0];
         }
@@ -637,6 +633,7 @@ export const speakMessage = (message) => {
         console.error("TTS error:", err);
     }
 };
+
 
 export const filterOptionsByMonth = [
     { id: 1, title: 'January', value: 0 },

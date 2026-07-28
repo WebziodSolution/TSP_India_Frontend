@@ -48,6 +48,7 @@ import FaceRegistrationPage from "./pages/faceRegistrationPage";
 import AutoClockIn from "./components/dashboard/settings/automationrRules/autoClockIn/autoClockIn";
 import ManageLeaveType from "./components/dashboard/permissions/manageLeaveType/manageLeaveType";
 import ManageEmployeeLeave from "./components/dashboard/permissions/manageEmployeeLeave/manageEmployeeLeave";
+import LoginIOS from "./iosPage/LoginIOS";
 
 library.add(fas, far)
 
@@ -69,6 +70,10 @@ function App() {
     {
       path: "/signin",
       element: <Login />,
+    },
+    {
+      path: "/inout/login",
+      element: <LoginIOS />,
     },
     {
       path: "/reset-pin/:token",
