@@ -72,6 +72,15 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
     };
 
     const loadModels = async () => {
+        if (
+            faceapi.nets.tinyFaceDetector.isLoaded &&
+            faceapi.nets.faceLandmark68Net.isLoaded &&
+            faceapi.nets.faceRecognitionNet.isLoaded
+        ) {
+            setModelsLoaded(true);
+            showMessage(setRegisterMessage, 'Models loaded. Starting webcam...', 'info');
+            return;
+        }
         try {
             await Promise.all([
                 faceapi.nets.tinyFaceDetector.load(modelsPath),

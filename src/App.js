@@ -44,7 +44,6 @@ import AddLateEntryTemplates from "./components/dashboard/settings/automationrRu
 import AddEarlyExitTemplates from "./components/dashboard/settings/automationrRules/addEarlyExitTemplates/addEarlyExitTemplates";
 import HolidaysTemplates from "./components/dashboard/settings/automationrRules/holidaysTemplates/holidaysTemplates";
 import AddHolidaysTemplates from "./components/dashboard/settings/automationrRules/holidaysTemplates/addHolidaysTemplates";
-import FaceRegistrationPage from "./pages/faceRegistrationPage";
 import AutoClockIn from "./components/dashboard/settings/automationrRules/autoClockIn/autoClockIn";
 import ManageLeaveType from "./components/dashboard/permissions/manageLeaveType/manageLeaveType";
 import ManageEmployeeLeave from "./components/dashboard/permissions/manageEmployeeLeave/manageEmployeeLeave";
@@ -58,10 +57,6 @@ function App() {
     {
       path: "*",
       element: <PageNotFound />,
-    },
-    {
-      path: "/faceRegistrationPage",
-      element: <FaceRegistrationPage />,
     },
     {
       path: "/",
