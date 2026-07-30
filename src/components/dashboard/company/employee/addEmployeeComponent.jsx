@@ -851,7 +851,7 @@ const AddEmployeeComponent = ({ setAlert, handleSetTitle, handleSetUserDetails }
             const payload = watch("allowances").concat(watch("deductions")).map((row) => {
                 return {
                     ...row,
-                    id: row.id || null,
+                    id: row.id || row.dbId || null,
                     amount: parseInt(row.amount),
                     employeeId: parseInt(row.employeeId || id)
                 }

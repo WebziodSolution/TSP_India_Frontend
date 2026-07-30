@@ -6,11 +6,7 @@ import { setLoading } from "../../redux/commonReducers/commonReducers";
 const baseURL = process.env.REACT_APP_MAIN_BASE_URL;
 
 const axiosInterceptor = () => {
-    let headers = {
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT",
-    };
+    let headers = {};
 
     if (Cookies.get('authToken')) {
         headers.Authorization = "Bearer " + Cookies.get('authToken');
