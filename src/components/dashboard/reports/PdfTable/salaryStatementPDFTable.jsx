@@ -130,7 +130,7 @@ const SalaryStatementPDFTable = ({
 
     return (
         <div className="overflow-x-auto h-full bg-white">
-            <div id="salary-table-container" style={{ width: '1150px', border: '2px solid black', padding: '16px' }}>
+            <div id="salary-table-container" style={{ width: '1350px', border: '2px solid black', padding: '16px' }}>
 
                 {/* Header Section */}
                 <div className="flex items-center justify-between border-b border-gray-400 pb-6 mb-8">

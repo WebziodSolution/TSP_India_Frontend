@@ -48,7 +48,7 @@ function SalaryStatementModel({ setAlert, open, handleClose, id, handleGetStatem
         handleSubmit,
         control,
         reset,
-        formState: { errors },
+        formState: { errors, dirtyFields },
     } = useForm({
         defaultValues: {
             id: "",
@@ -72,6 +72,9 @@ function SalaryStatementModel({ setAlert, open, handleClose, id, handleGetStatem
             totalWorkingDays: "",
             totalWorkingHours: "",
             note: "",
+            hourlyRate: "",
+            totalAllowance: "",
+            deduction: "",
         },
     });
 
@@ -100,6 +103,9 @@ function SalaryStatementModel({ setAlert, open, handleClose, id, handleGetStatem
             totalDays: "",
             totalWorkingDays: "",
             totalWorkingHours: "",
+            hourlyRate: "",
+            totalAllowance: "",
+            deduction: "",
         });
         handleClose();
     };
@@ -140,11 +146,13 @@ function SalaryStatementModel({ setAlert, open, handleClose, id, handleGetStatem
         const ptAmount = parseInt(watch("ptAmount")) || 0;
         const otherDeductions = parseInt(watch("otherDeductions")) || 0;
         const totalPF = parseInt(watch("pfAmount")) || 0;
+        const totalAllowance = parseInt(watch("totalAllowance")) || 0;
+        const deduction = parseInt(watch("deduction")) || 0;
 
         // 1. Calculate Total Earnings
         let totalSalary = 0;
-        if (userData?.hourlyRate && watch("totalWorkingHours") !== undefined && watch("totalWorkingHours") !== null) {
-            const hourlyRate = parseFloat(userData.hourlyRate) || 0;
+        const hourlyRate = parseFloat(watch("hourlyRate") || userData?.hourlyRate) || 0;
+        if (hourlyRate && watch("totalWorkingHours") !== undefined && watch("totalWorkingHours") !== null) {
             const totalWorkingHours = parseFloat(watch("totalWorkingHours")) || 0;
             const hrs = Math.floor(totalWorkingHours);
             const mins = Math.round((totalWorkingHours - hrs) * 100);
@@ -154,25 +162,36 @@ function SalaryStatementModel({ setAlert, open, handleClose, id, handleGetStatem
             const payDays = (totalWorkingDays + totalPaidDays) > 30 ? 30 : (totalWorkingDays + totalPaidDays);
             totalSalary = parseInt(daySalary * payDays) || 0;
         }
-        const totalEarnings = otAmount + totalSalary;
+        const totalEarnings = otAmount + totalSalary + totalAllowance;
 
         // 5. Calculate Final Deductions (including PF)
-        const totalDeductions = totalPF + ptAmount + otherDeductions;
+        const totalDeductions = totalPF + ptAmount + otherDeductions + deduction;
 
         // 6. Calculate Final Net Salary
         const netSalary = totalEarnings - totalDeductions;
 
         // 7. Update form values in a single batch
         setValue("totalEarnings", totalEarnings);
-        // setValue("pfAmount", totalPF);
         setValue("totalPfAmount", totalPF);
-        // setValue("pfPercentage", netSalaryBeforePF > 15000 ? null : pfPercentage);
         setValue("totalDeductions", totalDeductions);
         setValue("netSalary", netSalary);
     };
 
     useEffect(() => {
         if (isInitialLoading) return;
+
+        const isCalculationFieldDirty = 
+            dirtyFields.basicSalary ||
+            dirtyFields.totalPaidDays ||
+            dirtyFields.totalWorkingDays ||
+            dirtyFields.totalWorkingHours ||
+            dirtyFields.otAmount ||
+            dirtyFields.ptAmount ||
+            dirtyFields.pfAmount ||
+            dirtyFields.otherDeductions;
+
+        if (!isCalculationFieldDirty) return;
+
         calculateSalaryStatement();
     }, [
         isInitialLoading,
@@ -185,6 +204,7 @@ function SalaryStatementModel({ setAlert, open, handleClose, id, handleGetStatem
         watch("ptAmount"),
         watch("pfAmount"),
         watch("otherDeductions"),
+        dirtyFields,
     ]);
 
     useEffect(() => {

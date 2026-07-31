@@ -299,7 +299,7 @@ const SalaryReport = ({ handleSetTitle }) => {
     }, [row]);
 
 
-    const generatePdfFromElements = async (elements, fileName) => {
+    const generatePdfFromElements = async (elements, fileName, html2canvasOptions = {}) => {
         const pdf = new jsPDF({
             orientation: "portrait",
             unit: "mm",
@@ -315,7 +315,8 @@ const SalaryReport = ({ handleSetTitle }) => {
                 scale: 2,
                 useCORS: true,
                 logging: false,
-                backgroundColor: '#ffffff'
+                backgroundColor: '#ffffff',
+                ...html2canvasOptions
             });
 
             const imgData = canvas.toDataURL("image/jpeg", 0.8);
@@ -337,7 +338,7 @@ const SalaryReport = ({ handleSetTitle }) => {
         setTimeout(async () => {
             try {
                 const monthSections = document.querySelectorAll('#salary-table-container');
-                await generatePdfFromElements(monthSections, "salary_statement_report.pdf");
+                await generatePdfFromElements(monthSections, "salary_statement_report.pdf", { windowWidth: 1350 });
             } catch (error) {
                 console.error("Error generating PDF:", error);
             } finally {
@@ -492,7 +493,7 @@ const SalaryReport = ({ handleSetTitle }) => {
 
             {
                 showPdfContent && (
-                    <div className='absolute top-0 left-0 z-[-1] w-[794px] opacity-0'>
+                    <div className='absolute top-0 left-0 z-[-1] w-[1350px] opacity-0'>
                         <SalaryStatementPDFTable
                             data={groupedDataByMonthAndDepartment || []} // Fallback to empty array
                             companyInfo={companyInfo || {}}
