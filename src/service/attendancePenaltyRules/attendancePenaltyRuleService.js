@@ -33,7 +33,7 @@ export const createAttendancePenaltyRule = async (data) => {
 
 export const updateAttendancePenaltyRule = async (id, data) => {
     try {
-        const response = axiosInterceptor().patch(`${attendancePenaltyRulesURL}/update/${id}`, data)
+        const response = axiosInterceptor().put(`${attendancePenaltyRulesURL}/update/${id}`, data)
         return response
 
     } catch (error) {

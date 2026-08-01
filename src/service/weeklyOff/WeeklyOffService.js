@@ -34,7 +34,7 @@ export const createWeekOffTemplate = async (data) => {
 
 export const updateWeekOffTemplate = async (id,data) => {
     try {
-        const response = axiosInterceptor().patch(`${weeklyOffURL}/update/${id}`, data)
+        const response = axiosInterceptor().put(`${weeklyOffURL}/update/${id}`, data)
         return response
 
     } catch (error) {

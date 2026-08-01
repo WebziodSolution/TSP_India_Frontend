@@ -33,7 +33,7 @@ export const createHolidaysTemplate = async (data) => {
 
 export const updateHolidaysTemplate = async (id, data) => {
     try {
-        const response = axiosInterceptor().patch(`${holidayTemplatesURL}/update/${id}`, data)
+        const response = axiosInterceptor().put(`${holidayTemplatesURL}/update/${id}`, data)
         return response
 
     } catch (error) {

@@ -34,7 +34,7 @@ export const addSalaryStatement = async (data) => {
 
 export const updateSalaryStatement = async (id, data) => {
     try {
-        const response = axiosInterceptor().patch(`${salaryStatementHistoryURL}/updateHistory/${id}`, data)
+        const response = axiosInterceptor().put(`${salaryStatementHistoryURL}/updateHistory/${id}`, data)
         return response
 
     } catch (error) {

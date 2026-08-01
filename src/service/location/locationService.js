@@ -57,7 +57,7 @@ export const createLocation = async (data) => {
 
 export const updateLocation = async (id, data) => {
     try {
-        const response = axiosInterceptor().patch(`${locationURL}/update/${id}`, data)
+        const response = axiosInterceptor().put(`${locationURL}/update/${id}`, data)
         return response
     } catch (error) {
         console.log(error)

@@ -34,7 +34,7 @@ export const createOvertimeRule = async (id, data) => {
 
 export const updateOvertimeRule = async (id, data) => {
     try {
-        const response = axiosInterceptor().patch(`${overtimeRulesURL}/updateOvertimeRule/${id}`, data)
+        const response = axiosInterceptor().put(`${overtimeRulesURL}/updateOvertimeRule/${id}`, data)
         return response
 
     } catch (error) {
