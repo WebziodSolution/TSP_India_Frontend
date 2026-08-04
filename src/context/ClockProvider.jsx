@@ -17,8 +17,9 @@ const parseUTCToLocal = (s) => {
     if (ampm === "PM" && hh < 12) hh += 12;
     if (ampm === "AM" && hh === 12) hh = 0;
 
-    // treat provided string as UTC time
-    return new Date(Date.UTC(yyyy, mm - 1, dd, hh, min, ss));
+    // The backend sends a local timestamp string (DD/MM/YYYY, hh:mm:ss AM/PM).
+    // Create a local Date object so elapsed time is calculated from the local clock.
+    return new Date(yyyy, mm - 1, dd, hh, min, ss);
 };
 
 const ClockContext = createContext(null);
