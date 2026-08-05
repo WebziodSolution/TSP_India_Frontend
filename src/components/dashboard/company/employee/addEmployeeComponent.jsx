@@ -89,7 +89,7 @@ const AddEmployeeComponent = ({ setAlert, handleSetTitle, handleSetUserDetails }
         "Employment Info",
         "PayRoll Info",
         "Allowance & Deduction",
-        "Direact Deposite",
+        "Direct Deposit",
         "Face Registration"
     ])
 
@@ -192,6 +192,7 @@ const AddEmployeeComponent = ({ setAlert, handleSetTitle, handleSetUserDetails }
             confirmAccountNumber: "",
             address: "",
             passbookImage: "",
+            is_cash: false,
 
             allowances: [],
             deductions: []
@@ -427,6 +428,7 @@ const AddEmployeeComponent = ({ setAlert, handleSetTitle, handleSetUserDetails }
                     setValue("confirmAccountNumber", response?.data?.result?.accountNumber)
                     setValue("passbookImage", response?.data?.result?.passbookImage || "")
                     setValue("address", response?.data?.result?.address || "")
+                    setValue("is_cash", response?.data?.result?.is_cash)
                     setValue("accountType", accountTypeOptions?.filter((row) => row?.title === response?.data?.result?.accountType)?.[0]?.id || null)
                 }
             }
@@ -1889,6 +1891,9 @@ const AddEmployeeComponent = ({ setAlert, handleSetTitle, handleSetUserDetails }
                                                             placeholder="Select canteen type"
                                                             value={parseInt(watch("canteenType")) || null}
                                                             onChange={(_, newValue) => {
+                                                                if (newValue?.id === 3) {
+                                                                    setValue("lunchBreak", 0);
+                                                                }
                                                                 if (newValue?.id) {
                                                                     field.onChange(newValue.id);
                                                                 } else {
@@ -2190,174 +2195,198 @@ const AddEmployeeComponent = ({ setAlert, handleSetTitle, handleSetUserDetails }
                                 activeStep === 4 && (
                                     <>
                                         <div className='mb-2 font-medium text-center text-[28px] text-[#262B43]'>
-                                            <p style={{ color: theme.palette.primary.text.main, }}>Direact Deposite</p>
+                                            <p style={{ color: theme.palette.primary.text.main, }}>Direct Deposit</p>
                                         </div>
 
-                                        <div className='my-6 text-base font-medium leading-snug text-[#262B43]'>
-                                            <p style={{ color: theme.palette.primary.text.main, }}>Bank Information</p>
-                                        </div>
-
-                                        <div className='grid grid-cols-2 lg:grid-cols-2 gap-6'>
-                                            <div>
-                                                <Controller
-                                                    name="accountType"
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <Select
-                                                            options={accountTypeOptions}
-                                                            label={"Account Type"}
-                                                            placeholder="Select account type"
-                                                            value={parseInt(watch("accountType")) || null}
-                                                            onChange={(_, newValue) => {
-                                                                if (newValue?.id) {
-                                                                    field.onChange(newValue.id);
-                                                                } else {
-                                                                    setValue("accountType", null);
-                                                                }
-                                                            }}
-                                                        />
-                                                    )}
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <Controller
-                                                    name="bankName"
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <Input
-                                                            {...field}
-                                                            label="Bank Name"
-                                                            type={`text`}
-                                                            onChange={(e) => {
-                                                                field.onChange(e.target.value);
-                                                            }}
-                                                        />
-                                                    )}
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <Controller
-                                                    name="ifscCode"
-                                                    control={control}
-                                                    rules={{
-                                                        validate: (value) => {
-                                                            if (value === "" || value === null || value === undefined) return true; // ✅ No error when empty
-                                                            const ifscPattern = /^[A-Z]{4}0[A-Z0-9]{6}$/;
-                                                            return ifscPattern.test(value) || "(e.g., HDFC0001234)";
-                                                        },
-                                                    }}
-                                                    render={({ field }) => (
-                                                        <Input
-                                                            {...field}
-                                                            label="IFSC Code"
-                                                            type="text"
-                                                            onChange={(e) => {
-                                                                // Clean the input to match IFSC code format
-                                                                if (e.target.value) {
-                                                                    const cleaned = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-                                                                    field.onChange(cleaned);
-                                                                } else {
-                                                                    field.onChange("");
-                                                                }
-                                                            }}
-                                                            error={errors?.ifscCode}
-                                                            helperText={errors?.ifscCode ? errors.ifscCode.message : ""}
-                                                        />
-                                                    )}
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <Controller
-                                                    name="accountNumber"
-                                                    control={control}
-
-                                                    render={({ field }) => (
-                                                        <Input
-                                                            {...field}
-                                                            label="Account Number"
-                                                            type={`text`}
-                                                            onChange={(e) => {
-                                                                const numericValue = e.target.value.replace(/[^0-9]/g, '');
-                                                                field.onChange(numericValue);
-                                                            }}
-                                                        />
-                                                    )}
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <Controller
-                                                    name="confirmAccountNumber"
-                                                    control={control}
-                                                    rules={{
-                                                        validate: (value) => {
-                                                            if (watch("accountNumber") && value !== watch("accountNumber")) {
-                                                                return "Account number do not match";
+                                        <div className='w-40 mr-5'>
+                                            <Controller
+                                                name="is_cash"
+                                                control={control}
+                                                render={({ field }) => (
+                                                    <Checkbox
+                                                        text={'Cash Payment'}
+                                                        onChange={(e) => {
+                                                            field.onChange(e.target.checked)
+                                                            if (!e.target.checked) {
+                                                                setValue("is_cash", "");
                                                             }
-                                                            return true;
-                                                        },
-                                                    }}
-                                                    render={({ field }) => (
-                                                        <Input
-                                                            {...field}
-                                                            label="Confirm Account Number"
-                                                            type={`text`}
-                                                            onChange={(e) => {
-                                                                const numericValue = e.target.value.replace(/[^0-9]/g, '');
-                                                                field.onChange(numericValue);
-                                                            }}
-                                                            error={errors?.confirmAccountNumber}
-                                                        />
-                                                    )}
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <Controller
-                                                    name="branch"
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <Input
-                                                            {...field}
-                                                            label="Branch Name"
-                                                            type={`text`}
-                                                            onChange={(e) => {
-                                                                field.onChange(e.target.value);
-                                                            }}
-                                                        />
-                                                    )}
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <Controller
-                                                    name="address"
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <Input
-                                                            {...field}
-                                                            label="Address"
-                                                            type={`text`}
-                                                            onChange={(e) => {
-                                                                field.onChange(e.target.value);
-                                                            }}
-                                                        />
-                                                    )}
-                                                />
-                                            </div>
-
-                                            <div className='grid col-span-2'>
-                                                <FileInputBox
-                                                    onFileSelect={handleImageChangePassbook}
-                                                    onRemove={handleDeletePassbookImage}
-                                                    value={watch("passbookImage")}
-                                                    text="Click in this area to upload passbook image"
-                                                />
-                                            </div>
+                                                        }}
+                                                        checked={field.value}
+                                                    />
+                                                )}
+                                            />
                                         </div>
+                                        {
+                                            !watch("is_cash") && (
+                                                <>
+                                                    <div className='ml-3 my-6 text-base font-medium leading-snug text-[#262B43]'>
+                                                        <p style={{ color: theme.palette.primary.text.main, }}>Bank Information</p>
+                                                    </div>
+
+                                                    <div className='ml-3 grid grid-cols-2 lg:grid-cols-2 gap-6'>
+                                                        <div>
+                                                            <Controller
+                                                                name="accountType"
+                                                                control={control}
+                                                                render={({ field }) => (
+                                                                    <Select
+                                                                        options={accountTypeOptions}
+                                                                        label={"Account Type"}
+                                                                        placeholder="Select account type"
+                                                                        value={parseInt(watch("accountType")) || null}
+                                                                        onChange={(_, newValue) => {
+                                                                            if (newValue?.id) {
+                                                                                field.onChange(newValue.id);
+                                                                            } else {
+                                                                                setValue("accountType", null);
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                            />
+                                                        </div>
+
+                                                        <div>
+                                                            <Controller
+                                                                name="bankName"
+                                                                control={control}
+                                                                render={({ field }) => (
+                                                                    <Input
+                                                                        {...field}
+                                                                        label="Bank Name"
+                                                                        type={`text`}
+                                                                        onChange={(e) => {
+                                                                            field.onChange(e.target.value);
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                            />
+                                                        </div>
+
+                                                        <div>
+                                                            <Controller
+                                                                name="ifscCode"
+                                                                control={control}
+                                                                rules={{
+                                                                    validate: (value) => {
+                                                                        if (value === "" || value === null || value === undefined) return true; // ✅ No error when empty
+                                                                        const ifscPattern = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+                                                                        return ifscPattern.test(value) || "(e.g., HDFC0001234)";
+                                                                    },
+                                                                }}
+                                                                render={({ field }) => (
+                                                                    <Input
+                                                                        {...field}
+                                                                        label="IFSC Code"
+                                                                        type="text"
+                                                                        onChange={(e) => {
+                                                                            // Clean the input to match IFSC code format
+                                                                            if (e.target.value) {
+                                                                                const cleaned = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                                                                                field.onChange(cleaned);
+                                                                            } else {
+                                                                                field.onChange("");
+                                                                            }
+                                                                        }}
+                                                                        error={errors?.ifscCode}
+                                                                        helperText={errors?.ifscCode ? errors.ifscCode.message : ""}
+                                                                    />
+                                                                )}
+                                                            />
+                                                        </div>
+
+                                                        <div>
+                                                            <Controller
+                                                                name="accountNumber"
+                                                                control={control}
+
+                                                                render={({ field }) => (
+                                                                    <Input
+                                                                        {...field}
+                                                                        label="Account Number"
+                                                                        type={`text`}
+                                                                        onChange={(e) => {
+                                                                            const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                                                                            field.onChange(numericValue);
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                            />
+                                                        </div>
+
+                                                        <div>
+                                                            <Controller
+                                                                name="confirmAccountNumber"
+                                                                control={control}
+                                                                rules={{
+                                                                    validate: (value) => {
+                                                                        if (watch("accountNumber") && value !== watch("accountNumber")) {
+                                                                            return "Account number do not match";
+                                                                        }
+                                                                        return true;
+                                                                    },
+                                                                }}
+                                                                render={({ field }) => (
+                                                                    <Input
+                                                                        {...field}
+                                                                        label="Confirm Account Number"
+                                                                        type={`text`}
+                                                                        onChange={(e) => {
+                                                                            const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                                                                            field.onChange(numericValue);
+                                                                        }}
+                                                                        error={errors?.confirmAccountNumber}
+                                                                    />
+                                                                )}
+                                                            />
+                                                        </div>
+
+                                                        <div>
+                                                            <Controller
+                                                                name="branch"
+                                                                control={control}
+                                                                render={({ field }) => (
+                                                                    <Input
+                                                                        {...field}
+                                                                        label="Branch Name"
+                                                                        type={`text`}
+                                                                        onChange={(e) => {
+                                                                            field.onChange(e.target.value);
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                            />
+                                                        </div>
+
+                                                        <div>
+                                                            <Controller
+                                                                name="address"
+                                                                control={control}
+                                                                render={({ field }) => (
+                                                                    <Input
+                                                                        {...field}
+                                                                        label="Address"
+                                                                        type={`text`}
+                                                                        onChange={(e) => {
+                                                                            field.onChange(e.target.value);
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                            />
+                                                        </div>
+
+                                                        <div className='grid col-span-2'>
+                                                            <FileInputBox
+                                                                onFileSelect={handleImageChangePassbook}
+                                                                onRemove={handleDeletePassbookImage}
+                                                                value={watch("passbookImage")}
+                                                                text="Click in this area to upload passbook image"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )
+                                        }
                                     </>
                                 )
                             }

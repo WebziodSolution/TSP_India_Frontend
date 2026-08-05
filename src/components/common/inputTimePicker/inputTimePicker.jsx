@@ -20,6 +20,7 @@ const InputTimePicker = ({ name, control, label, rules, disabled, minTime, maxTi
             minTime={minTime}
             maxTime={maxTime}
             closeOnSelect={false}   // 👈 ADD THIS
+            referenceDate={minTime || undefined}
             slotProps={{
               textField: {
                 error: !!error,
