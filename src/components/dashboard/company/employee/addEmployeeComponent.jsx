@@ -548,19 +548,21 @@ const AddEmployeeComponent = ({ setAlert, handleSetTitle, handleSetUserDetails }
             if (res.data.status === 200) {
                 const { imageURL } = res?.data?.result?.uploadedFiles?.[0];
                 const updateRes = await uploadEmployeeImage({
-                    employee: imageURL,
+                employee: imageURL,
                     companyId,
                     employeeId: id,
                 });
 
                 if (updateRes.data.status === 200) {
                     let JsonData = JSON.parse(localStorage.getItem('userInfo'))
-                    JsonData = {
-                        ...JsonData,
-                        profileImage: updateRes.data.result
+                    if (JsonData && (String(JsonData.employeeId) === String(id) || String(JsonData.userId) === String(id))) {
+                        JsonData = {
+                            ...JsonData,
+                            profileImage: updateRes.data.result
+                        }
+                        localStorage.setItem("userInfo", JSON.stringify(JsonData))
+                        handleSetUserDetails(JsonData)
                     }
-                    localStorage.setItem("userInfo", JSON.stringify(JsonData))
-                    handleSetUserDetails(JsonData)
                     setActiveStep((prev) => prev + 1);
                     return { success: true };
                 } else {
@@ -818,12 +820,12 @@ const AddEmployeeComponent = ({ setAlert, handleSetTitle, handleSetUserDetails }
             earlyExitPenaltyRule: data.earlyExitPenaltyRule ? 1 : 0,
         }
         if (activeStep === 2) {
-            if (id) {
+            if (id || watch("employeeId")) {
                 if (oldData?.userName !== watch("userName") || oldData?.password !== watch("password")) {
                     handleOpenDialogLogin(newData);
                     return;
                 }
-                const res = await updateEmployee(id, newData)
+                const res = await updateEmployee(id || watch("employeeId"), newData)
                 if (res.data?.status === 200) {
                     setValue("employeeId", res?.data?.result?.employeeId)
                     handleUploadAadharImage(companyId, res?.data?.result?.employeeId)
