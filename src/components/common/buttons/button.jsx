@@ -27,6 +27,7 @@ const Button = ({
         textTransform: "capitalize",
         fontWeight: 500,
         fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
+        whiteSpace: 'nowrap',
         height: 40
     };
 

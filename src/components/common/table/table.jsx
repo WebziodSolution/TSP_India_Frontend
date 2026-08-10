@@ -2,6 +2,7 @@ import { DataGrid, GridOverlay } from '@mui/x-data-grid';
 import Input from '../input/input';
 import { useTheme } from '@mui/material';
 import CustomIcons from '../icons/CustomIcons';
+import Button from '../buttons/button';
 import { useMemo } from 'react';
 
 const paginationModel = { page: 0, pageSize: 50 };
@@ -91,18 +92,33 @@ export default function DataTable({
     return (
         <>
             {(showSearch || showButtons) && (
-                <div className="border border-1 py-4 px-5 rounded-lg rounded-b-none grid md:grid-cols-2">
-                    <div className="w-full md:w-60 mb-3 md:mb-0 md:max-w-xs">
-                        {showSearch && (
+                <div className="border border-1 py-4 px-5 rounded-lg rounded-b-none flex flex-col md:flex-row justify-between items-center gap-3">
+                    {showSearch ? (
+                        <div className="w-full md:w-60 md:max-w-xs">
                             <Input
                                 name="search"
                                 label="Search"
                                 endIcon={<CustomIcons iconName={'fa-solid fa-magnifying-glass'} css='mr-3' />}
                             />
+                        </div>
+                    ) : null}
+                    <div className={`w-full flex ${showSearch ? 'md:w-auto' : 'w-full'} justify-end items-center gap-3 ml-auto`}>
+                        {showButtons && (
+                            buttons ? (
+                                typeof buttons === 'function' ? buttons() : buttons
+                            ) : (
+                                buttonText ? (
+                                    <div className="w-full md:w-auto">
+                                        <Button
+                                            type="button"
+                                            text={buttonText}
+                                            onClick={buttonAction}
+                                            startIcon={<CustomIcons iconName="fa-solid fa-plus" css="h-5 w-5" />}
+                                        />
+                                    </div>
+                                ) : null
+                            )
                         )}
-                    </div>
-                    <div className="w-full flex justify-end md:justify-end items-center gap-3">
-                        {showButtons && buttons()}
                     </div>
                 </div>
             )}
