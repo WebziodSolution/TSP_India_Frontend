@@ -595,43 +595,87 @@ export async function playBeep() {
         console.warn("Beep playback failed:", err);
     }
 }
+// Global reference to prevent JavaScript garbage collection bug in Chrome/Safari
+let activeUtterance = null;
+
 export const speakMessage = (message) => {
-    try {
-        if (!window.speechSynthesis) {
-            console.error("Browser does not support Speech Synthesis");
-            return;
+    return new Promise((resolve) => {
+        try {
+            if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+                console.warn("Browser does not support Speech Synthesis");
+                resolve();
+                return;
+            }
+
+            const synth = window.speechSynthesis;
+
+            // Chrome/Safari bug fix: Unpause if stuck in paused state
+            if (synth.paused) {
+                synth.resume();
+            }
+
+            // Cancel any previously playing utterance
+            synth.cancel();
+
+            // 50ms delay prevents Chrome race condition where cancel() kills the next queued utterance
+            setTimeout(() => {
+                const utterance = new SpeechSynthesisUtterance(message);
+                activeUtterance = utterance; // Prevent garbage collection mid-speech
+
+                const selectVoice = () => {
+                    const voices = synth.getVoices() || [];
+                    let selectedVoice = voices.find(
+                        (v) => v.lang.toLowerCase().startsWith("en") && /female/i.test(v.name)
+                    );
+                    if (!selectedVoice) {
+                        selectedVoice = voices.find((v) => v.lang.toLowerCase().startsWith("en"));
+                    }
+                    if (!selectedVoice && voices.length > 0) {
+                        selectedVoice = voices[0];
+                    }
+                    if (selectedVoice) {
+                        utterance.voice = selectedVoice;
+                    }
+                };
+
+                selectVoice();
+                if (synth.onvoiceschanged !== undefined) {
+                    synth.onvoiceschanged = selectVoice;
+                }
+
+                utterance.rate = 0.9;
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+
+                utterance.onend = () => {
+                    activeUtterance = null;
+                    resolve();
+                };
+
+                utterance.onerror = (e) => {
+                    console.warn("TTS playback error/interrupted:", e);
+                    activeUtterance = null;
+                    resolve();
+                };
+
+                // Fallback resolve after 4 seconds if onend does not fire on mobile
+                setTimeout(() => {
+                    resolve();
+                }, 4000);
+
+                synth.speak(utterance);
+
+                // Resume again right after speak for mobile quirks
+                if (synth.paused) {
+                    synth.resume();
+                }
+            }, 50);
+
+        } catch (err) {
+            console.error("TTS error:", err);
+            resolve();
         }
-
-        // Cancel any active/stuck speech synthesis queues
-        window.speechSynthesis.cancel();
-
-        const utterance = new SpeechSynthesisUtterance(message);
-        const voices = window.speechSynthesis.getVoices();
-
-        let selectedVoice = voices.find(
-            (v) => v.lang.toLowerCase().startsWith("en") && /female/i.test(v.name)
-        );
-
-        if (!selectedVoice) {
-            selectedVoice = voices.find((v) => v.lang.toLowerCase().startsWith("en"));
-        }
-
-        if (!selectedVoice && voices.length > 0) {
-            selectedVoice = voices[0];
-        }
-
-        if (selectedVoice) {
-            utterance.voice = selectedVoice;
-        }
-
-        utterance.rate = 0.8;
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
-
-        window.speechSynthesis.speak(utterance);
-    } catch (err) {
-        console.error("TTS error:", err);
-    }
+    });
 };
 
 

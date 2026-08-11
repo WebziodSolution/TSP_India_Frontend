@@ -42,6 +42,9 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
     const countdownActiveRef = useRef(false);
     const faceDetectionIntervalRef = useRef(null);
     const latestDescriptorRef = useRef(null);
+    const isDetectingRef = useRef(false);
+    const currentStreamRef = useRef(null);
+    const detectorOptionsRef = useRef(new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }));
 
     const [currentStream, setCurrentStream] = useState(null);
     const [capturedImageDataURL, setCapturedImageDataURL] = useState(null);
@@ -78,7 +81,6 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
             faceapi.nets.faceRecognitionNet.isLoaded
         ) {
             setModelsLoaded(true);
-            showMessage(setRegisterMessage, 'Models loaded. Starting webcam...', 'info');
             return;
         }
         try {
@@ -89,8 +91,6 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
             ]);
             setModelsLoaded(true);
             console.log('Face-API models loaded successfully.');
-            // Initial message after models load, before webcam is fully ready
-            showMessage(setRegisterMessage, 'Models loaded. Starting webcam...', 'info');
         } catch (error) {
             console.error('Failed to load face-api.js models:', error);
             showMessage(setRegisterMessage, 'Error loading face detection models. Please refresh.', 'error');
@@ -112,23 +112,24 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
     };
 
     const detectFaces = async () => {
-        if (isPhotoAlreadyCaptured) {
-            console.log('detectFaces: Photo already captured, skipping detection cycle.');
+        if (isPhotoAlreadyCaptured || isDetectingRef.current) {
             return;
         }
 
         if (!webcamVideoRef.current || webcamVideoRef.current.paused || webcamVideoRef.current.ended || !modelsLoaded) {
-            console.log('detectFaces: Webcam or models not ready.');
             return;
         }
 
-        try {
-            const detectionWithDescriptor = await faceapi.detectSingleFace(
-                webcamVideoRef.current,
-                new faceapi.TinyFaceDetectorOptions()
-            ).withFaceLandmarks().withFaceDescriptor();
+        isDetectingRef.current = true;
 
-            if (!detectionWithDescriptor || detectionWithDescriptor.detection.score < 0.6) {
+        try {
+            // Lightweight face detection only during streaming (no heavy landmark/descriptor per frame)
+            const detection = await faceapi.detectSingleFace(
+                webcamVideoRef.current,
+                detectorOptionsRef.current
+            );
+
+            if (!detection || detection.score < 0.5) {
                 if (!isPhotoAlreadyCaptured) {
                     showMessage(setRegisterMessage, 'No face detected. Please stand in front of the camera.', 'info');
                 }
@@ -153,19 +154,14 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
                 width: webcamVideoRef.current.offsetWidth,
                 height: webcamVideoRef.current.offsetHeight
             };
-            const resizedDetection = faceapi.resizeResults(detectionWithDescriptor, displaySize);
-            const detection = resizedDetection.detection;
-            const landmarks = resizedDetection.landmarks;
+            const resizedDetection = faceapi.resizeResults(detection, displaySize);
+            const faceBox = resizedDetection.box;
 
-            // Draw detection box and landmarks
             if (detectionCanvasRef.current) {
                 const ctx = detectionCanvasRef.current.getContext('2d');
                 ctx.clearRect(0, 0, detectionCanvasRef.current.width, detectionCanvasRef.current.height);
-                // faceapi.draw.drawDetections(detectionCanvasRef.current, detection);
-                faceapi.draw.drawFaceLandmarks(detectionCanvasRef.current, landmarks);
             }
 
-            const faceBox = detection.box;
             const frameRect = faceFrameRef.current.getBoundingClientRect();
             const videoRect = webcamVideoRef.current.getBoundingClientRect();
 
@@ -204,16 +200,33 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
                 faceFrameRef.current.style.borderColor = "#22c55e"; // Green
                 faceFrameRef.current.querySelectorAll('.corner').forEach(c => c.style.borderColor = "#22c55e");
 
-                // Store the latest face descriptor string
-                latestDescriptorRef.current = JSON.stringify(Array.from(resizedDetection.descriptor));
-
                 if (!isPhotoAlreadyCaptured && !countdownActiveRef.current) {
                     countdownActiveRef.current = true;
+                    latestDescriptorRef.current = null;
+
+                    // Pre-compute face descriptor in the background DURING the 2-second countdown
+                    // By the time countdown reaches 0, the descriptor is already finished!
+                    (async () => {
+                        try {
+                            if (webcamVideoRef.current && !webcamVideoRef.current.paused) {
+                                const fullResult = await faceapi.detectSingleFace(
+                                    webcamVideoRef.current,
+                                    new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.45 })
+                                ).withFaceLandmarks().withFaceDescriptor();
+
+                                if (fullResult && countdownActiveRef.current) {
+                                    latestDescriptorRef.current = JSON.stringify(Array.from(fullResult.descriptor));
+                                }
+                            }
+                        } catch (e) {
+                            console.log('Background descriptor computation:', e);
+                        }
+                    })();
+
                     let countdown = 2;
                     countdownIntervalRef.current = setInterval(() => {
                         countdown--;
-                        if (countdown > 0) {
-                        } else {
+                        if (countdown <= 0) {
                             clearInterval(countdownIntervalRef.current);
                             countdownIntervalRef.current = null;
                             countdownActiveRef.current = false;
@@ -230,6 +243,7 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
                     clearInterval(countdownIntervalRef.current);
                     countdownIntervalRef.current = null;
                     countdownActiveRef.current = false;
+                    latestDescriptorRef.current = null;
                     showMessage(setRegisterMessage, 'Face moved out of alignment. Please re-center.', 'warning');
                 } else if (!isPhotoAlreadyCaptured) {
                     showMessage(setRegisterMessage, 'Please position your face within the frame.', 'info');
@@ -238,90 +252,30 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
 
         } catch (err) {
             console.error('Face detection error:', err);
-        }
-    };
-
-    const startWebcam = async () => {
-        stopWebcam();
-        clearMessage(setRegisterMessage);
-        clearMessage(setRegisterMessage);
-        setCapturedImageDataURL(null);
-        setFaceDescriptor(null);
-        latestDescriptorRef.current = null;
-        setIsPhotoAlreadyCaptured(false); // Ensure this is false to restart detection
-        countdownActiveRef.current = false;
-
-        // --- VISIBILITY CONTROL ---
-        if (webcamDisplayRef.current) webcamDisplayRef.current.classList.remove('hidden');
-        if (capturedDisplayRef.current) capturedDisplayRef.current.classList.add('hidden');
-        // Ensure detection elements are visible when webcam is active
-        if (webcamVideoRef.current) webcamVideoRef.current.classList.remove('hidden');
-        if (detectionCanvasRef.current) detectionCanvasRef.current.classList.remove('hidden');
-        if (faceFrameRef.current) faceFrameRef.current.classList.remove('hidden');
-
-
-        // Clean up previous stream if exists
-        if (currentStream) {
-            currentStream.getTracks().forEach(track => {
-                track.stop();
-            });
-            setCurrentStream(null);
-        }
-        // Also clear any existing face detection interval
-        if (faceDetectionIntervalRef.current) {
-            clearInterval(faceDetectionIntervalRef.current);
-            faceDetectionIntervalRef.current = null;
-        }
-        if (countdownIntervalRef.current) {
-            clearInterval(countdownIntervalRef.current);
-            countdownIntervalRef.current = null;
-        }
-
-
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    facingMode: 'user'
-                }
-            });
-            setCurrentStream(stream);
-
-            if (webcamVideoRef.current) {
-                webcamVideoRef.current.srcObject = stream;
-                showMessage(setRegisterMessage, 'Webcam started. Please position your face within the frame.', 'info'); // Simplified message
-
-                webcamVideoRef.current.onloadedmetadata = async () => {
-                    try {
-                        await handlePlayVideo(webcamVideoRef.current);
-                        // Optional: Add a small delay here if you still face issues with video frames not being ready
-                        // await new Promise(resolve => setTimeout(resolve, 100));
-
-                        const displaySize = {
-                            width: webcamVideoRef.current.offsetWidth,
-                            height: webcamVideoRef.current.offsetHeight
-                        };
-                        faceapi.matchDimensions(detectionCanvasRef.current, displaySize);
-                        // The useEffect with dependencies will handle starting detection
-                    } catch (err) {
-                        console.error('onloadedmetadata: Error in handler:', err);
-                        showMessage(setRegisterMessage, 'Error starting webcam. Please try again.', 'error');
-                    }
-                };
-            }
-
-        } catch (err) {
-            console.error('startWebcam: Error accessing webcam:', err);
-            showMessage(setRegisterMessage, 'Could not start webcam. Please check permissions.', 'error');
+        } finally {
+            isDetectingRef.current = false;
         }
     };
 
     const stopWebcam = () => {
-        if (currentStream) {
-            currentStream.getTracks().forEach(track => track.stop());
-            setCurrentStream(null);
+        if (currentStreamRef.current) {
+            currentStreamRef.current.getTracks().forEach(track => {
+                try {
+                    track.stop();
+                } catch (e) { }
+            });
+            currentStreamRef.current = null;
         }
+
+        if (webcamVideoRef.current && webcamVideoRef.current.srcObject) {
+            try {
+                const tracks = webcamVideoRef.current.srcObject.getTracks?.() || [];
+                tracks.forEach(track => track.stop());
+                webcamVideoRef.current.srcObject = null;
+            } catch (e) { }
+        }
+
+        setCurrentStream(null);
 
         if (faceDetectionIntervalRef.current) {
             clearInterval(faceDetectionIntervalRef.current);
@@ -335,19 +289,97 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
 
         countdownActiveRef.current = false;
         faceAlignedRef.current = false;
+        isDetectingRef.current = false;
+    };
 
-        // Optional: Clear UI state if needed
-        clearMessage(setRegisterMessage);
+    const startWebcam = async (retryCount = 0) => {
+        const hadPreviousStream = !!currentStreamRef.current || !!webcamVideoRef.current?.srcObject;
+        stopWebcam();
+
+        // If a previous stream was just closed, wait 200ms for OS hardware camera lock to release
+        if (hadPreviousStream) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+        }
+
         clearMessage(setRegisterMessage);
         setCapturedImageDataURL(null);
         setFaceDescriptor(null);
         latestDescriptorRef.current = null;
-        setIsPhotoAlreadyCaptured(false);
+        setIsPhotoAlreadyCaptured(false); // Ensure this is false to restart detection
+        countdownActiveRef.current = false;
+
+        // Reset face frame border to default
+        if (faceFrameRef.current) {
+            faceFrameRef.current.style.borderColor = "#ef4444";
+            faceFrameRef.current.querySelectorAll('.corner').forEach(c => c.style.borderColor = "#ef4444");
+        }
+
+        // --- VISIBILITY CONTROL ---
+        if (webcamDisplayRef.current) webcamDisplayRef.current.classList.remove('hidden');
+        if (capturedDisplayRef.current) capturedDisplayRef.current.classList.add('hidden');
+        // Ensure detection elements are visible when webcam is active
+        if (webcamVideoRef.current) webcamVideoRef.current.classList.remove('hidden');
+        if (detectionCanvasRef.current) detectionCanvasRef.current.classList.remove('hidden');
+        if (faceFrameRef.current) faceFrameRef.current.classList.remove('hidden');
+
+        try {
+            const constraints = {
+                video: {
+                    facingMode: 'user',
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            };
+
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+            } catch (initialErr) {
+                console.warn('Initial getUserMedia failed, retrying with basic constraints:', initialErr);
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            }
+
+            currentStreamRef.current = stream;
+            setCurrentStream(stream);
+
+            if (webcamVideoRef.current) {
+                webcamVideoRef.current.srcObject = stream;
+                showMessage(setRegisterMessage, 'Position your face within the frame to capture.', 'info');
+
+                webcamVideoRef.current.onloadedmetadata = async () => {
+                    try {
+                        await handlePlayVideo(webcamVideoRef.current);
+
+                        const displaySize = {
+                            width: webcamVideoRef.current.offsetWidth,
+                            height: webcamVideoRef.current.offsetHeight
+                        };
+                        if (detectionCanvasRef.current) {
+                            faceapi.matchDimensions(detectionCanvasRef.current, displaySize);
+                        }
+                    } catch (err) {
+                        console.error('onloadedmetadata: Error in handler:', err);
+                        showMessage(setRegisterMessage, 'Error starting webcam. Please try again.', 'error');
+                    }
+                };
+            }
+
+        } catch (err) {
+            console.error('startWebcam: Error accessing webcam:', err);
+
+            // Auto-retry if camera hardware was temporarily locked/busy (AbortError / NotReadableError)
+            if ((err.name === 'AbortError' || err.name === 'NotReadableError') && retryCount < 2) {
+                console.log(`Camera busy (${err.name}), retrying in 400ms... (attempt ${retryCount + 1})`);
+                await new Promise(resolve => setTimeout(resolve, 400));
+                return startWebcam(retryCount + 1);
+            }
+
+            showMessage(setRegisterMessage, 'Could not start webcam. Please check permissions.', 'error');
+        }
     };
 
-    const capturePhoto = () => {
-
-        if (!currentStream) {
+    const capturePhoto = async () => {
+        if (!currentStream || !webcamVideoRef.current) {
             console.log('Capture failed: No current stream');
             showMessage(setRegisterMessage, 'Webcam not active.', 'error');
             return;
@@ -395,15 +427,51 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
 
             const dataURL = photoCanvasRef.current.toDataURL('image/jpeg', 0.9);
             setCapturedImageDataURL(dataURL);
-            setFaceDescriptor(latestDescriptorRef.current);
             if (capturedPhotoRef.current) capturedPhotoRef.current.src = dataURL;
+
+            // Check pre-computed descriptor from countdown
+            let descriptor = latestDescriptorRef.current;
+
+            // Fallback: If not ready yet, compute once directly from video
+            if (!descriptor && webcamVideoRef.current) {
+                try {
+                    const directResult = await faceapi.detectSingleFace(
+                        webcamVideoRef.current,
+                        new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 })
+                    ).withFaceLandmarks().withFaceDescriptor();
+
+                    if (directResult) {
+                        descriptor = JSON.stringify(Array.from(directResult.descriptor));
+                    }
+                } catch (err) {
+                    console.error("Direct descriptor extraction fallback:", err);
+                }
+            }
 
             // --- VISIBILITY CONTROL ---
             webcamDisplayRef.current?.classList.add('hidden'); // Hide webcam
             capturedDisplayRef.current?.classList.remove('hidden'); // Show captured photo
 
-            setIsPhotoAlreadyCaptured(true); // This state change is key for stopping detection
+            setIsPhotoAlreadyCaptured(true); // This state change stops detection loop
             faceAlignedRef.current = false;
+
+            // Turn off camera stream hardware immediately once photo is taken
+            if (currentStreamRef.current) {
+                currentStreamRef.current.getTracks().forEach(track => {
+                    try {
+                        track.stop();
+                    } catch (e) { }
+                });
+                currentStreamRef.current = null;
+            }
+            if (webcamVideoRef.current?.srcObject) {
+                try {
+                    const tracks = webcamVideoRef.current.srcObject.getTracks?.() || [];
+                    tracks.forEach(track => track.stop());
+                    webcamVideoRef.current.srcObject = null;
+                } catch (e) { }
+            }
+            setCurrentStream(null);
 
             // Ensure all intervals are stopped after capture
             if (faceDetectionIntervalRef.current) {
@@ -413,11 +481,16 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
             if (countdownIntervalRef.current) {
                 clearInterval(countdownIntervalRef.current);
                 countdownIntervalRef.current = null;
-                console.log('capturePhoto: Stopped countdown interval.');
             }
             countdownActiveRef.current = false;
 
-            showMessage(setRegisterMessage, 'Face captured successfully! You can now register.', 'success');
+            if (descriptor) {
+                setFaceDescriptor(descriptor);
+                latestDescriptorRef.current = descriptor;
+                showMessage(setRegisterMessage, 'Face captured successfully! You can now proceed.', 'success');
+            } else {
+                showMessage(setRegisterMessage, 'Could not extract face details clearly. Please retake photo.', 'warning');
+            }
         } catch (err) {
             console.error('Error capturing photo:', err);
             showMessage(setRegisterMessage, 'Error capturing photo. Please try again.', 'error');
@@ -426,27 +499,26 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
 
     const retakePhoto = () => {
         clearMessage(setRegisterMessage);
-        clearMessage(setRegisterMessage);
         setCapturedImageDataURL(null);
         setFaceDescriptor(null);
         latestDescriptorRef.current = null;
-        setIsPhotoAlreadyCaptured(false); // This state change is key for restarting detection
+        setIsPhotoAlreadyCaptured(false); // This state change restarts detection
         countdownActiveRef.current = false;
 
         // --- VISIBILITY CONTROL ---
         capturedDisplayRef.current?.classList.add('hidden'); // Hide captured photo
         webcamDisplayRef.current?.classList.remove('hidden'); // Show webcam
 
-        startWebcam(); // This will re-initialize the webcam and its state, triggering useEffect to restart detection
+        startWebcam();
     };
 
     const registerUser = async () => {
         setIsLoading(true);
         clearMessage(setRegisterMessage);
 
-        if (!capturedImageDataURL) {
+        if (!capturedImageDataURL || !faceDescriptor) {
             setIsLoading(false);
-            showMessage(setRegisterMessage, 'No captured face detected. Please retake or capture a new face.', 'error');
+            showMessage(setRegisterMessage, 'No valid face descriptor found. Please retake photo.', 'error');
             return;
         }
 
@@ -495,13 +567,12 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
 
     useEffect(() => {
         if (modelsLoaded && currentStream && webcamVideoRef.current && !isPhotoAlreadyCaptured) {
-            // Clear any existing interval before setting a new one
             if (faceDetectionIntervalRef.current) {
                 clearInterval(faceDetectionIntervalRef.current);
             }
-            faceDetectionIntervalRef.current = setInterval(detectFaces, 150);
+            // 200ms non-blocking interval leaves CPU/GPU free for 60fps video rendering
+            faceDetectionIntervalRef.current = setInterval(detectFaces, 200);
         } else {
-            // Stop detection if conditions are not met (e.g., photo captured, stream stopped)
             if (faceDetectionIntervalRef.current) {
                 clearInterval(faceDetectionIntervalRef.current);
                 faceDetectionIntervalRef.current = null;
@@ -511,13 +582,11 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
                 countdownIntervalRef.current = null;
                 countdownActiveRef.current = false;
             }
-            // This is important: if detection stops because a photo was captured, reset faceAlignedRef
             if (isPhotoAlreadyCaptured) {
                 faceAlignedRef.current = false;
             }
         }
 
-        // Cleanup for this specific effect
         return () => {
             if (faceDetectionIntervalRef.current) {
                 clearInterval(faceDetectionIntervalRef.current);
@@ -533,7 +602,9 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
 
     useEffect(() => {
         if (open) {
-            loadModels().then(startWebcam);
+            // Start webcam immediately and load models in parallel (no waiting for download before opening camera)
+            startWebcam();
+            loadModels();
         } else {
             stopWebcam();
         }
@@ -608,6 +679,7 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
                                 <img
                                     id="capturedPhoto"
                                     ref={capturedPhotoRef}
+                                    src={capturedImageDataURL || ''}
                                     alt="Captured Preview"
                                     className=" w-full h-full object-cover rounded-lg"
                                 />
