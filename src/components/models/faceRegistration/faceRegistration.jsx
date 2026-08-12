@@ -516,9 +516,9 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
         setIsLoading(true);
         clearMessage(setRegisterMessage);
 
-        if (!capturedImageDataURL || !faceDescriptor) {
+        if (!capturedImageDataURL) {
             setIsLoading(false);
-            showMessage(setRegisterMessage, 'No valid face descriptor found. Please retake photo.', 'error');
+            showMessage(setRegisterMessage, 'Please capture your photo before proceeding.', 'error');
             return;
         }
 
@@ -528,7 +528,21 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
         const apiEndpoint = isLogin ? "/login" : "/register";
 
         formData.append('employeeId', employeeId);
-        formData.append('faceDescriptor', faceDescriptor);
+        
+        // Send captured photo as JPEG image file for InsightFace 512D ArcFace processing
+        try {
+            const imageBlob = dataURLtoBlob(capturedImageDataURL);
+            formData.append('image', imageBlob, 'face.jpg');
+        } catch (e) {
+            console.error('Error converting dataURL to blob:', e);
+        }
+        
+        // Also send base64 data and descriptor for maximum server compatibility
+        formData.append('image_base64', capturedImageDataURL);
+        if (faceDescriptor) {
+            formData.append('faceDescriptor', faceDescriptor);
+        }
+
         try {
             const response = await fetch(`${API_BASE_URL}${apiEndpoint}`, {
                 method: 'POST',

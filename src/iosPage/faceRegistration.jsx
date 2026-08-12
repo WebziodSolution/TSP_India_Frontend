@@ -470,14 +470,10 @@ function FaceRegistration({ setAlert, setLoginInfo }) {
             }
             countdownActiveRef.current = false;
 
-            if (descriptor) {
-                setFaceDescriptor(descriptor);
-                latestDescriptorRef.current = descriptor;
-                showMessage(setRegisterMessage, 'Face captured successfully! Logging in...', 'success');
-                registerUser(descriptor);
-            } else {
-                showMessage(setRegisterMessage, 'Could not extract face details clearly. Please retake photo.', 'warning');
-            }
+            setFaceDescriptor(descriptor);
+            latestDescriptorRef.current = descriptor;
+            showMessage(setRegisterMessage, 'Face captured successfully! Logging in...', 'success');
+            registerUser(descriptor, dataURL);
         } catch (err) {
             console.error('Error capturing photo:', err);
             showMessage(setRegisterMessage, 'Error capturing photo. Please try again.', 'error');
@@ -499,9 +495,11 @@ function FaceRegistration({ setAlert, setLoginInfo }) {
         startWebcam();
     };
 
-    const registerUser = async (descriptor) => {
+    const registerUser = async (descriptor, imageURL) => {
         clearMessage(setRegisterMessage);
-        if (!descriptor) {
+        const activeDataURL = imageURL || capturedImageDataURL;
+
+        if (!activeDataURL && !descriptor) {
             await playBeep();
             showMessage(setRegisterMessage, 'No captured face detected. Please retake or capture a new face.', 'error');
             return;
@@ -510,7 +508,20 @@ function FaceRegistration({ setAlert, setLoginInfo }) {
         const formData = new FormData();
         const apiEndpoint = "/login";
 
-        formData.append('faceDescriptor', descriptor);
+        // Send captured photo as JPEG image file for InsightFace 512D ArcFace processing
+        if (activeDataURL) {
+            try {
+                const imageBlob = dataURLtoBlob(activeDataURL);
+                formData.append('image', imageBlob, 'face.jpg');
+            } catch (e) {
+                console.error('Error converting dataURL to blob:', e);
+            }
+            formData.append('image_base64', activeDataURL);
+        }
+
+        if (descriptor) {
+            formData.append('faceDescriptor', descriptor);
+        }
 
         try {
             console.log('Sending request to:', `${API_BASE_URL}${apiEndpoint}`);
