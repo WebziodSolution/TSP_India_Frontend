@@ -595,89 +595,123 @@ export async function playBeep() {
         console.warn("Beep playback failed:", err);
     }
 }
-// Global reference to prevent JavaScript garbage collection bug in Chrome/Safari
-let activeUtterance = null;
+// Keep a global reference to active utterances to prevent garbage collection on Safari/Chrome
+const activeUtterances = new Set();
 
-export const speakMessage = (message) => {
+let isSpeechUnlocked = false;
+
+export const unlockSpeech = () => {
+    if (isSpeechUnlocked || typeof window === 'undefined' || !window.speechSynthesis) return;
+    try {
+        window.speechSynthesis.resume();
+        const utterance = new SpeechSynthesisUtterance("");
+        utterance.volume = 0;
+        window.speechSynthesis.speak(utterance);
+        isSpeechUnlocked = true;
+        console.log("SpeechSynthesis unlocked successfully.");
+
+        // Clean up event listeners
+        window.removeEventListener("click", unlockSpeech);
+        window.removeEventListener("touchstart", unlockSpeech);
+        window.removeEventListener("touchend", unlockSpeech);
+    } catch (e) {
+        console.warn("Failed to unlock SpeechSynthesis:", e);
+    }
+};
+
+if (typeof window !== "undefined") {
+    window.addEventListener("click", unlockSpeech);
+    window.addEventListener("touchstart", unlockSpeech);
+    window.addEventListener("touchend", unlockSpeech);
+}
+
+const getSystemVoices = () => {
     return new Promise((resolve) => {
-        try {
-            if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-                console.warn("Browser does not support Speech Synthesis");
-                resolve();
-                return;
-            }
-
-            const synth = window.speechSynthesis;
-
-            // Chrome/Safari bug fix: Unpause if stuck in paused state
-            if (synth.paused) {
-                synth.resume();
-            }
-
-            // Cancel any previously playing utterance
-            synth.cancel();
-
-            // 50ms delay prevents Chrome race condition where cancel() kills the next queued utterance
-            setTimeout(() => {
-                const utterance = new SpeechSynthesisUtterance(message);
-                activeUtterance = utterance; // Prevent garbage collection mid-speech
-
-                const selectVoice = () => {
-                    const voices = synth.getVoices() || [];
-                    let selectedVoice = voices.find(
-                        (v) => v.lang.toLowerCase().startsWith("en") && /female/i.test(v.name)
-                    );
-                    if (!selectedVoice) {
-                        selectedVoice = voices.find((v) => v.lang.toLowerCase().startsWith("en"));
-                    }
-                    if (!selectedVoice && voices.length > 0) {
-                        selectedVoice = voices[0];
-                    }
-                    if (selectedVoice) {
-                        utterance.voice = selectedVoice;
-                    }
-                };
-
-                selectVoice();
-                if (synth.onvoiceschanged !== undefined) {
-                    synth.onvoiceschanged = selectVoice;
-                }
-
-                utterance.rate = 0.9;
-                utterance.pitch = 1.0;
-                utterance.volume = 1.0;
-
-                utterance.onend = () => {
-                    activeUtterance = null;
-                    resolve();
-                };
-
-                utterance.onerror = (e) => {
-                    console.warn("TTS playback error/interrupted:", e);
-                    activeUtterance = null;
-                    resolve();
-                };
-
-                // Fallback resolve after 4 seconds if onend does not fire on mobile
-                setTimeout(() => {
-                    resolve();
-                }, 4000);
-
-                synth.speak(utterance);
-
-                // Resume again right after speak for mobile quirks
-                if (synth.paused) {
-                    synth.resume();
-                }
-            }, 50);
-
-        } catch (err) {
-            console.error("TTS error:", err);
-            resolve();
+        if (typeof window === 'undefined' || !window.speechSynthesis) {
+            resolve([]);
+            return;
         }
+        let voices = window.speechSynthesis.getVoices();
+        if (voices && voices.length > 0) {
+            resolve(voices);
+            return;
+        }
+
+        // If not loaded yet, wait for voiceschanged event
+        const onVoicesChanged = () => {
+            voices = window.speechSynthesis.getVoices();
+            resolve(voices);
+            window.speechSynthesis.onvoiceschanged = null;
+        };
+        window.speechSynthesis.onvoiceschanged = onVoicesChanged;
+
+        // Fallback timeout to not block forever
+        setTimeout(() => {
+            if (window.speechSynthesis.onvoiceschanged === onVoicesChanged) {
+                window.speechSynthesis.onvoiceschanged = null;
+            }
+            resolve(window.speechSynthesis.getVoices() || []);
+        }, 800);
     });
 };
 
+export const speakMessage = async (message) => {
+    try {
+        if (typeof window === 'undefined' || !window.speechSynthesis) {
+            console.error("Browser does not support Speech Synthesis");
+            return;
+        }
+
+        // Try unlocking/priming if it hasn't been done yet
+        unlockSpeech();
+
+        // Cancel any active/stuck speech synthesis queues
+        window.speechSynthesis.cancel();
+
+        // Always resume before speaking to avoid paused/stuck states
+        window.speechSynthesis.resume();
+
+        const utterance = new SpeechSynthesisUtterance(message);
+
+        // Add to active set to prevent garbage collection
+        activeUtterances.add(utterance);
+
+        const cleanup = () => {
+            activeUtterances.delete(utterance);
+        };
+        utterance.onend = cleanup;
+        utterance.onerror = cleanup;
+
+        const voices = await getSystemVoices();
+
+        let selectedVoice = voices.find(
+            (v) => v.lang.toLowerCase().startsWith("en") && /female/i.test(v.name)
+        );
+
+        if (!selectedVoice) {
+            selectedVoice = voices.find((v) => v.lang.toLowerCase().startsWith("en"));
+        }
+
+        if (!selectedVoice && voices.length > 0) {
+            selectedVoice = voices[0];
+        }
+
+        if (selectedVoice) {
+            utterance.voice = selectedVoice;
+            utterance.lang = selectedVoice.lang;
+        } else {
+            utterance.lang = "en-US";
+        }
+
+        utterance.rate = 0.8;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        window.speechSynthesis.speak(utterance);
+    } catch (err) {
+        console.error("TTS error:", err);
+    }
+};
 
 export const filterOptionsByMonth = [
     { id: 1, title: 'January', value: 0 },
