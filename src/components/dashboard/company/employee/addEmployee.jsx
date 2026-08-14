@@ -652,7 +652,7 @@ const AddEmployee = ({ setAlert, companyId, employeeId = null, setAddEmployee, s
                                 />
                             )}
                         />
-                    </div>                   
+                    </div>
 
                     <div>
                         <Controller
@@ -679,15 +679,13 @@ const AddEmployee = ({ setAlert, companyId, employeeId = null, setAddEmployee, s
 
                 <div className='flex justify-end mt-3 gap-3'>
                     <div>
+                        <Button type={'button'} onClick={handleBack} text={"Back"} useFor={'disabled'} />
+                    </div>
+                    <div>
                         <Button type={'submit'} text={"Submit"} isLoading={loading} />
                     </div>
                 </div>
             </form>
-            <div className='absolute border rounded-full top-0'>
-                <Components.IconButton onClick={() => handleBack()}>
-                    <CustomIcons iconName={'fa-solid fa-arrow-left'} css=' cursor-pointer h-5 w-5' />
-                </Components.IconButton>
-            </div>
         </div>
     )
 }

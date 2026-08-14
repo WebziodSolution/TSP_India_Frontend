@@ -159,7 +159,7 @@ const Login = ({ setAlert, handleSetUserDetails, handleSetTheme, setLoading }) =
             if (!response.data.result?.data?.companyId) {
                 const res = await getRole(response.data.result?.data?.roleId);
                 localStorage.setItem('permissions', JSON.stringify(res.data?.result?.role?.rolesActions?.functionalities))
-                navigate('/dashboard')
+                navigate('/dashboard/managecompany')
             } else {
                 if (response.data.result?.data?.themeId) {
                     const theme = await getCompanyTheme(response.data.result?.data?.themeId)
@@ -217,7 +217,7 @@ const Login = ({ setAlert, handleSetUserDetails, handleSetTheme, setLoading }) =
                 localStorage.setItem('permissions', JSON.stringify(res.data?.result?.rolesActions?.functionalities))
                 if (!response.data.result?.data?.companyId) {
                     Cookies.set('authToken', response.data.result?.token, { expires: 1 });
-                    navigate('/dashboard')
+                    navigate('/dashboard/main')
                 } else {
                     Cookies.set('authToken', response.data.result?.token, { expires: 1 });
                     navigate('/dashboard/main')

@@ -462,7 +462,7 @@ const AddCompany = ({ setShowCompanyDetails, setAlert, setCompanyId, id, setAddC
         let contact = []
         setContactRow((prev) => {
             if (prev) {
-                const allValid = requiredContactKeys.every(field => isValid(prev[field]));            
+                const allValid = requiredContactKeys.every(field => isValid(prev[field]));
                 if (allValid) {
                     contact = [...prev];
                 }

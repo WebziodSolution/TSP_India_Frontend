@@ -528,7 +528,7 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
         const apiEndpoint = isLogin ? "/login" : "/register";
 
         formData.append('employeeId', employeeId);
-        
+
         // Send captured photo as JPEG image file for InsightFace 512D ArcFace processing
         try {
             const imageBlob = dataURLtoBlob(capturedImageDataURL);
@@ -536,7 +536,7 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
         } catch (e) {
             console.error('Error converting dataURL to blob:', e);
         }
-        
+
         // Also send base64 data and descriptor for maximum server compatibility
         formData.append('image_base64', capturedImageDataURL);
         if (faceDescriptor) {
@@ -666,12 +666,12 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
                                     autoPlay
                                     muted
                                     playsInline
-                                    className="absolute top-0 left-0 w-full h-full object-cover"
+                                    className="absolute top-0 left-0 w-full h-full object-cover -scale-x-100"
                                 />
                                 <canvas
                                     id="detectionCanvas"
                                     ref={detectionCanvasRef}
-                                    className="absolute top-0 left-0 w-full h-full"
+                                    className="absolute top-0 left-0 w-full h-full -scale-x-100"
                                 />
                                 <div
                                     className="face-frame absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 md:w-52 h-4/5 md:max-w-[25rem] max-h-[32rem] border-2 border-opacity-80 border-red-500 rounded-xl pointer-events-none z-10 transition-colors"
@@ -695,7 +695,7 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
                                     ref={capturedPhotoRef}
                                     src={capturedImageDataURL || ''}
                                     alt="Captured Preview"
-                                    className=" w-full h-full object-cover rounded-lg"
+                                    className=" w-full h-full object-cover rounded-lg -scale-x-100"
                                 />
 
                                 {/* Retake Button Overlay */}
