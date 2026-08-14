@@ -120,6 +120,7 @@ const LoginIOS = ({ setAlert, setLoading }) => {
                     if (locations.data.status === 200) {
                         const locationData = locations?.data?.result?.map(item => ({
                             externalId: item.externalId,
+                            locationId: item.id
                         }));
 
                         setLoading(true)
@@ -132,10 +133,10 @@ const LoginIOS = ({ setAlert, setLoading }) => {
                             setLoading(false)
                             return;
                         }
-                        const allowedExternalIds = locationData?.map((loc, i) => {
+                        const allowedExternalIds = locationData?.map((loc) => {
                             return {
                                 externalId: loc.externalId,
-                                locationId: i.id
+                                locationId: loc.locationId
                             }
                         });
 

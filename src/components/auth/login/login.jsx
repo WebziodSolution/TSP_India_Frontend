@@ -188,7 +188,7 @@ const Login = ({ setAlert, handleSetUserDetails, handleSetTheme, setLoading }) =
                                 setLoading(false)
                                 return;
                             }
-                            const allowedExternalIds = locationData?.map((loc, i) => {
+                            const allowedExternalIds = locationData?.map((loc) => {
                                 return {
                                     externalId: loc.externalId,
                                     locationId: loc.locationId
