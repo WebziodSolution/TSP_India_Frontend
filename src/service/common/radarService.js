@@ -109,36 +109,189 @@ export const getCurrentLocation = async () => {
     }
 }
 
+export const requestLocationPermission = async () => {
+    try {
+        if (isNative()) {
+            let permissions = await Geolocation.checkPermissions();
+
+            if (
+                permissions.location !== 'granted' &&
+                permissions.coarseLocation !== 'granted'
+            ) {
+                permissions = await Geolocation.requestPermissions();
+            }
+
+            return permissions;
+        }
+
+        // Web: permission is requested automatically when getCurrentPosition()
+        // or watchPosition() is called.
+        return new Promise((resolve) => {
+            if (!navigator.geolocation) {
+                resolve({
+                    location: 'denied',
+                    error: 'GEOLOCATION_NOT_SUPPORTED'
+                });
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                () => {
+                    resolve({ location: 'granted' });
+                },
+                (error) => {
+                    resolve({
+                        location: 'denied',
+                        error: error.code
+                    });
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        });
+
+    } catch (error) {
+        console.error('Permission error:', error);
+
+        return {
+            location: 'denied',
+            error: error?.message || 'LOCATION_PERMISSION_ERROR'
+        };
+    }
+};
+
 export const getAccurateLocation = async () => {
     try {
         if (isNative()) {
+            let permissions = await Geolocation.checkPermissions();
+
+            if (
+                permissions.location !== 'granted' &&
+                permissions.coarseLocation !== 'granted'
+            ) {
+                permissions = await Geolocation.requestPermissions();
+            }
+
+            // IMPORTANT:
+            // For attendance, don't accept coarse-only location.
+            if (permissions.location !== 'granted') {
+                return {
+                    error: 'PRECISE_LOCATION_REQUIRED',
+                    message:
+                        'Please allow Precise Location for accurate attendance.'
+                };
+            }
+
             const position = await Geolocation.getCurrentPosition({
                 enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0,
+                timeout: 15000,
+                maximumAge: 0
             });
 
-            const { latitude, longitude, accuracy, altitude } = position.coords;
-            return { latitude, longitude, accuracy, source: 'capacitor', altitude };
-        } else {
-            // Web fallback
-            return new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const { latitude, longitude, accuracy, altitude } = position.coords;
-                        resolve({ latitude, longitude, accuracy, source: 'web', altitude });
-                    },
-                    (error) => {
-                        console.warn("Web geolocation error:", error);
-                        resolve(null);
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                );
-            });
+            const {
+                latitude,
+                longitude,
+                accuracy,
+                altitude,
+                heading,
+                speed
+            } = position.coords;
+
+            return {
+                latitude,
+                longitude,
+                accuracy,
+                altitude,
+                heading,
+                speed,
+                source: 'native'
+            };
         }
-    } catch (err) {
-        console.error("Location error:", err);
-        return null;
+
+        // WEB
+        if (!navigator.geolocation) {
+            return {
+                error: 'GEOLOCATION_NOT_SUPPORTED',
+                message: 'Geolocation is not supported by this browser.'
+            };
+        }
+
+        return await new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const {
+                        latitude,
+                        longitude,
+                        accuracy,
+                        altitude,
+                        heading,
+                        speed
+                    } = position.coords;
+
+                    resolve({
+                        latitude,
+                        longitude,
+                        accuracy,
+                        altitude,
+                        heading,
+                        speed,
+                        source: 'web'
+                    });
+                },
+                (error) => {
+                    console.error('Web geolocation error:', error);
+
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            resolve({
+                                error: 'PERMISSION_DENIED',
+                                message:
+                                    'Location permission was denied. Please allow location access.'
+                            });
+                            break;
+
+                        case error.POSITION_UNAVAILABLE:
+                            resolve({
+                                error: 'LOCATION_DISABLED',
+                                message:
+                                    'Location is unavailable. Please turn on GPS/location services.'
+                            });
+                            break;
+
+                        case error.TIMEOUT:
+                            resolve({
+                                error: 'TIMEOUT',
+                                message:
+                                    'Unable to get an accurate location. Please try again.'
+                            });
+                            break;
+
+                        default:
+                            resolve({
+                                error: 'UNKNOWN_ERROR',
+                                message:
+                                    error.message || 'Unable to get location.'
+                            });
+                    }
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                }
+            );
+        });
+
+    } catch (error) {
+        console.error('Location error:', error);
+
+        return {
+            error: 'UNKNOWN_ERROR',
+            message: error?.message || 'Could not retrieve location.'
+        };
     }
 };
 

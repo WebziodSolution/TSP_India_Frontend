@@ -65,13 +65,26 @@ const Login = ({ setAlert, handleSetUserDetails, handleSetTheme, setLoading }) =
         try {
             const location = await getAccurateLocation();
 
+            if (location?.error) {
+                setAlert({
+                    open: true,
+                    message: location.message,
+                    type: "error"
+                });
+                return false;
+            }
+
             if (!window.Radar) {
                 console.error("Radar SDK not loaded.");
                 return false;
             }
 
             if (!location?.latitude || !location?.longitude) {
-                console.error("Location data not available.");
+                setAlert({
+                    open: true,
+                    message: "Location data is not available. Please make sure location services are enabled on your device.",
+                    type: "error"
+                });
                 return false;
             }
 
@@ -81,7 +94,7 @@ const Login = ({ setAlert, handleSetUserDetails, handleSetTheme, setLoading }) =
             const formattedLongitude = parseFloat(longitude.toFixed(5));
 
             window.Radar.initialize(radarPKAPIKey);
-            window.Radar.setUserId(`timesheetspro_user_${radarUserId}`);
+            window.Radar.setUserId(`calcsalary_user_${radarUserId}`);
 
             return new Promise((resolve) => {
                 window.Radar.trackOnce(
@@ -109,24 +122,6 @@ const Login = ({ setAlert, handleSetUserDetails, handleSetTheme, setLoading }) =
                                 return; // 🔥 breaks loop + exits function
                             }
                         }
-
-                        console.log("❌ No matching geofence found.");
-                        resolve({ isInside: false, location });
-
-                        // for (const g of geofences) {
-                        //     const geofenceExternalId = g?.externalId;
-                        //     if (allowedExternalIds.map(loc => loc.externalId).includes(geofenceExternalId)) {
-                        //         console.log("allowedExternalIds",allowedExternalIds)
-                        //         const locationId = allowedExternalIds.find(loc => loc.externalId === geofenceExternalId)?.locationId;
-                        //         if (locationId !== undefined) {
-                        //             sessionStorage.setItem("locationId", locationId);
-                        //             console.log("✅ Matched geofence:", geofenceExternalId);
-                        //             resolve({ isInside: true, location });
-                        //             return;
-                        //         }
-                        //     }
-                        // }
-
                         console.log("❌ No matching geofence found.");
                         resolve({ isInside: false, location });
                     }
@@ -236,7 +231,7 @@ const Login = ({ setAlert, handleSetUserDetails, handleSetTheme, setLoading }) =
     };
 
     useEffect(() => {
-        document.title = "Signin-TimeSheetsPro"
+        document.title = "Signin-Calcsalary"
         if (Cookies.get('authToken')) {
             navigate('/dashboard')
         }

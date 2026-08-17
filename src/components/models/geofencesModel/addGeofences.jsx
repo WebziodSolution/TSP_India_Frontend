@@ -40,7 +40,7 @@ const center = {
 };
 
 const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, companyId, handleGetLocations }) => {
-    const theme = useTheme();   
+    const theme = useTheme();
     const [loading, setLoading] = useState(false)
 
     const [polygons, setPolygons] = useState([]);
@@ -280,7 +280,7 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
                     type: 'polygon',
                     coordinates,
                     tag: polygon.tag || 'restricted',
-                    externalId: `timesheetspro_${companyId}_${selectedLocationRow?.id}`
+                    externalId: `calcsalary_${companyId}_${selectedLocationRow?.id}`
                 };
 
                 if (selectedLocationRow?.geofenceId) {
@@ -457,7 +457,7 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
                                         }}
                                     />
                                 )}
-                            
+
                                 {polygons?.map((polygon) => {
                                     const polygonId = polygon.id || `poly-${JSON.stringify(polygon.path)}`;
                                     return (

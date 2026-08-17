@@ -5,7 +5,7 @@ import { setAlert, setLoading } from '../redux/commonReducers/commonReducers';
 import { connect } from 'react-redux';
 import { getLocations } from '../service/location/locationService';
 import { radarPKAPIKey } from '../config/apiConfig/apiConfig';
-import { getAccurateLocation } from '../service/common/radarService';
+import { getAccurateLocation, requestLocationPermission } from '../service/common/radarService';
 import FaceRegistration from './faceRegistration';
 import { addUserTimeInPhone } from '../service/userInOut/userInOut';
 import { speakMessage } from '../service/common/commonService';
@@ -13,9 +13,22 @@ import { speakMessage } from '../service/common/commonService';
 const LoginIOS = ({ setAlert, setLoading }) => {
     const [loginInfo, setLoginInfo] = useState(null);
 
+    useEffect(() => {
+        requestLocationPermission();
+    }, []);
+
     const checkGeofenceStatus = async (allowedExternalIds, radarUserId) => {
         try {
             const location = await getAccurateLocation();
+
+            if (location?.error) {
+                setAlert({
+                    open: true,
+                    message: location.message,
+                    type: "error"
+                });
+                return false;
+            }
 
             if (!window.Radar) {
                 console.error("Radar SDK not loaded.");
@@ -23,7 +36,11 @@ const LoginIOS = ({ setAlert, setLoading }) => {
             }
 
             if (!location?.latitude || !location?.longitude) {
-                console.error("Location data not available.");
+                setAlert({
+                    open: true,
+                    message: "Location data is not available. Please make sure location services are enabled on your device.",
+                    type: "error"
+                });
                 return false;
             }
 
@@ -33,7 +50,7 @@ const LoginIOS = ({ setAlert, setLoading }) => {
             const formattedLongitude = parseFloat(longitude.toFixed(5));
 
             window.Radar.initialize(radarPKAPIKey);
-            window.Radar.setUserId(`timesheetspro_user_${radarUserId}`);
+            window.Radar.setUserId(`calcsalary_user_${radarUserId}`);
 
             return new Promise((resolve) => {
                 window.Radar.trackOnce(
