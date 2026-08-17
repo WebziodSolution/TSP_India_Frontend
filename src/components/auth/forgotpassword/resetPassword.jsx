@@ -78,7 +78,7 @@ const ResetPassword = ({ setAlert }) => {
     }
 
     useEffect(() => {
-        document.title = "ResetPassword-TimeSheetsPro"
+        document.title = "ResetPassword-CalcSalary"
         checkValidUrl()
     }, [])
 

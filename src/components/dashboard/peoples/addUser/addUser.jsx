@@ -232,7 +232,7 @@ const AddUser = ({ setAlert, handleSetTitle }) => {
             phone: '',
             profileImage: ""
         })
-        setValue("personalIdentificationNumber", `TimeSheetsPro-${Math.floor(100000 + Math.random() * 900000)}`)
+        setValue("personalIdentificationNumber", `CalcSalary-${Math.floor(100000 + Math.random() * 900000)}`)
         setIsAddEmployee(true)
     }
 
@@ -551,7 +551,7 @@ const AddUser = ({ setAlert, handleSetTitle }) => {
         handleGetAllUsers()
         handleGetAllDepartment()
         handleGetAllUserRoles()
-        handleGetAllCountrys()        
+        handleGetAllCountrys()
         if (!isAddEmployee) {
             handleSetTitle("Manage User")
         }

@@ -1,16 +1,17 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { styled } from '@mui/material/styles';
-import { Tooltip, useTheme } from '@mui/material';
+import { Tooltip, useTheme, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 
 import Components from '../../muiComponents/components';
 import Button from '../../common/buttons/button';
 import CustomIcons from '../../common/icons/CustomIcons';
 import {
     GoogleMap,
-    DrawingManager,
+    DrawingManagerF as DrawingManager,
     useJsApiLoader,
-    Polygon,
-    Marker
+    PolygonF as Polygon,
+    MarkerF as Marker,
+    CircleF as Circle
 } from '@react-google-maps/api';
 import { googleMapAPIKey } from '../../../config/apiConfig/apiConfig';
 import { searchLocationDetails } from '../../../service/common/googleMapService';
@@ -39,9 +40,45 @@ const center = {
     lng: -122.4194
 };
 
+const circleOptions = {
+    fillColor: '#2196F3',
+    fillOpacity: 0.4,
+    strokeColor: '#2196F3',
+    strokeOpacity: 0.8,
+    strokeWeight: 2,
+    editable: true,
+    draggable: true,
+    zIndex: 1
+};
+
+const polygonOptions = {
+    fillColor: '#2196F3',
+    fillOpacity: 0.5,
+    strokeWeight: 2,
+    editable: true,
+    draggable: true
+};
+
+const drawingManagerOptions = {
+    drawingControl: false,
+    polygonOptions: {
+        fillColor: '#2196F3',
+        fillOpacity: 0.5,
+        strokeWeight: 2,
+        clickable: true,
+        editable: true,
+        zIndex: 1,
+    },
+};
+
 const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, companyId, handleGetLocations }) => {
     const theme = useTheme();
     const [loading, setLoading] = useState(false)
+
+    const [geofenceType, setGeofenceType] = useState('circle'); // 'circle' or 'polygon'
+    const [circle, setCircle] = useState(null); // { id, center: { lat, lng }, radius, tag, description }
+    const [circleRadiusInput, setCircleRadiusInput] = useState(10); // default radius 50m
+    const circleRef = useRef(null);
 
     const [polygons, setPolygons] = useState([]);
     const [selectedLocation, setSelectedLocation] = useState(null);
@@ -82,6 +119,8 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
     const onClose = () => {
         handleClose();
         setPolygons([])
+        setCircle(null)
+        setGeofenceType('circle')
         setSelectedLocation(null)
         setIsDrawing(false)
         drawingManagerRef.current = null;
@@ -116,7 +155,20 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
             const geofencePolygons = [];
 
             res?.geofences?.forEach((geo) => {
-                if (geo.geometry?.type === 'Polygon' && Array.isArray(geo.geometry.coordinates)) {
+                if (geo.type === 'circle' || geo.geometryCenter) {
+                    const lng = geo.geometryCenter.coordinates[0];
+                    const lat = geo.geometryCenter.coordinates[1];
+                    const radius = geo.geometryRadius;
+                    setGeofenceType('circle');
+                    setCircle({
+                        id: geo._id,
+                        center: { lat, lng },
+                        radius: radius || 50,
+                        description: geo.description || 'Circle geofence',
+                        tag: geo.tag || 'restricted',
+                    });
+                    setSelectedLocation({ lat, lng });
+                } else if (geo.geometry?.type === 'Polygon' && Array.isArray(geo.geometry.coordinates)) {
                     const polygonCoordinates = geo.geometry.coordinates[0].map(([lng, lat]) => ({
                         lat,
                         lng
@@ -129,6 +181,7 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
                         description: geo.description || '',
                         tag: geo.tag || '',
                     });
+                    setGeofenceType('polygon');
                 }
             });
             setPolygons(geofencePolygons);
@@ -139,7 +192,7 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
         }
     };
 
-    const onPolygonComplete = (polygon) => {
+    const onPolygonComplete = useCallback((polygon) => {
         const path = polygon.getPath();
         const coordinates = [];
 
@@ -172,7 +225,7 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
             drawingManagerRef.current.setDrawingMode(null);
         }
         setIsDrawing(false);
-    };
+    }, []);
 
     const handlePolygonEdit = useCallback((polygonId) => {
         const polygonInstance = polygonRefs.current.get(polygonId);
@@ -201,38 +254,96 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
     }, []);
 
     const toggleDrawingMode = () => {
-        if (!isDrawing && polygons?.length === 0) {
-            setIsDrawing(true); // Enable drawing
-        } else {
-            // Manually cancel drawing if user clicks cancel
-            if (drawingManagerRef.current) {
-                drawingManagerRef.current.setDrawingMode(null);
-                drawingManagerRef.current = null;
+        if (geofenceType === 'circle') {
+            if (!isDrawing && !circle) {
+                setIsDrawing(true);
+            } else {
+                setIsDrawing(false);
             }
-            setIsDrawing(false);
+        } else {
+            if (!isDrawing && polygons?.length === 0) {
+                setIsDrawing(true); // Enable drawing
+            } else {
+                // Manually cancel drawing if user clicks cancel
+                if (drawingManagerRef.current) {
+                    drawingManagerRef.current.setDrawingMode(null);
+                    drawingManagerRef.current = null;
+                }
+                setIsDrawing(false);
+            }
         }
     };
 
-    const handleMapClick = (e) => {
-        if (!isDrawing) {
-            const lat = e.latLng.lat();
-            const lng = e.latLng.lng();
+    const handleMapClick = useCallback((e) => {
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
+
+        if (isDrawing && geofenceType === 'circle') {
+            setCircle({
+                id: `circle-${Date.now()}`,
+                center: { lat, lng },
+                radius: circleRadiusInput,
+                tag: 'restricted',
+                description: 'Geofence area'
+            });
+            setSelectedLocation({ lat, lng });
+            setIsDrawing(false);
+        } else if (!isDrawing) {
             setSelectedLocation({ lat, lng });
         }
-    };
+    }, [isDrawing, geofenceType, circleRadiusInput]);
+
+    const onCircleLoad = useCallback((circleInstance) => {
+        circleRef.current = circleInstance;
+    }, []);
+
+    const onCircleUnmount = useCallback(() => {
+        circleRef.current = null;
+    }, []);
+
+    const handleCircleCenterChanged = useCallback(() => {
+        if (circleRef.current) {
+            const newCenter = circleRef.current.getCenter();
+            const lat = newCenter.lat();
+            const lng = newCenter.lng();
+            setCircle(prev => {
+                if (!prev) return null;
+                if (prev.center.lat === lat && prev.center.lng === lng) return prev;
+                return { ...prev, center: { lat, lng } };
+            });
+            setSelectedLocation({ lat, lng });
+        }
+    }, []);
+
+    const handleCircleRadiusChanged = useCallback(() => {
+        if (circleRef.current) {
+            const newRadius = circleRef.current.getRadius();
+            const roundedRadius = Math.round(newRadius);
+            setCircle(prev => {
+                if (!prev) return null;
+                if (prev.radius === roundedRadius) return prev;
+                return { ...prev, radius: roundedRadius };
+            });
+            setCircleRadiusInput(roundedRadius);
+        }
+    }, []);
 
     const deletePolygon = () => {
-        const polygonInstance = polygonRefs.current.get(polygonId);
+        if (geofenceType === 'circle') {
+            setCircle(null);
+        } else {
+            const polygonInstance = polygonRefs.current.get(polygonId);
 
-        if (polygonInstance && typeof polygonInstance.setMap === 'function') {
-            polygonInstance.setMap(null);
+            if (polygonInstance && typeof polygonInstance.setMap === 'function') {
+                polygonInstance.setMap(null);
+            }
+
+            polygonRefs.current.delete(polygonId);
+            setPolygons(prev => prev.filter(poly => {
+                const currentPolyId = poly.id || `poly-${JSON.stringify(poly.path)}`;
+                return currentPolyId !== polygonId;
+            }));
         }
-
-        polygonRefs.current.delete(polygonId);
-        setPolygons(prev => prev.filter(poly => {
-            const currentPolyId = poly.id || `poly-${JSON.stringify(poly.path)}`;
-            return currentPolyId !== polygonId;
-        }));
         if (geofenceId) {
             deleteGeofence(geofenceId)
                 .then(async () => {
@@ -258,16 +369,23 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
                 });
         }
         handleCloseDialog();
-
     };
 
     const handleSubmit = async () => {
         setLoading(true);
         try {
-            // if (!polygons.length) return setAlert({ open: true, message: "Geofence is required", type: "error" });
-
-            const polygon = polygons[0];
-            if (polygon) {
+            let payload = null;
+            if (geofenceType === 'circle' && circle) {
+                payload = {
+                    description: circle.description || 'Circle geofence',
+                    type: 'circle',
+                    coordinates: [circle.center.lng, circle.center.lat],
+                    radius: circle.radius,
+                    tag: circle.tag || 'restricted',
+                    externalId: `calcsalary_${companyId}_${selectedLocationRow?.id}`
+                };
+            } else if (geofenceType === 'polygon' && polygons?.length > 0) {
+                const polygon = polygons[0];
                 const coordinates = polygon?.path?.map(coord => [coord.lng, coord.lat]);
                 const first = coordinates[0];
                 const last = coordinates[coordinates.length - 1];
@@ -275,14 +393,16 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
                 if (first[0] !== last[0] || first[1] !== last[1]) {
                     coordinates.push(first);
                 }
-                const payload = {
+                payload = {
                     description: polygon.description || 'User drawn polygon',
                     type: 'polygon',
                     coordinates,
                     tag: polygon.tag || 'restricted',
                     externalId: `calcsalary_${companyId}_${selectedLocationRow?.id}`
                 };
+            }
 
+            if (payload) {
                 if (selectedLocationRow?.geofenceId) {
                     const res = await updateGeofences(selectedLocationRow?.geofenceId, payload)
                     if (res?.meta?.code === 200) {
@@ -314,7 +434,7 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
                     }
                 }
             } else {
-                setAlert({ open: true, message: "Please draw a geofence before submitting", type: "error" });
+                setAlert({ open: true, message: "Please define a geofence before submitting", type: "error" });
             }
         } catch (error) {
             console.error("Geofence submission error:", error);
@@ -360,14 +480,59 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
                         <div className="w-[40rem]">
                             <div>
 
-                                <div className="flex justify-end my-3 mr-5">
+                                <div className="flex justify-between items-center my-3 mr-5 gap-4">
+                                    <div className="flex gap-4 items-center">
+                                        <FormControl size="small" sx={{ minWidth: 160 }}>
+                                            <InputLabel id="geofence-type-label">Geofence Type</InputLabel>
+                                            <Select
+                                                labelId="geofence-type-label"
+                                                value={geofenceType}
+                                                label="Geofence Type"
+                                                onChange={(e) => {
+                                                    setGeofenceType(e.target.value);
+                                                    setCircle(null);
+                                                    setPolygons([]);
+                                                    setIsDrawing(false);
+                                                }}
+                                            >
+                                                <MenuItem value="circle">Circle (Radius)</MenuItem>
+                                                <MenuItem value="polygon">Polygon</MenuItem>
+                                            </Select>
+                                        </FormControl>
+
+                                        {geofenceType === 'circle' && (
+                                            <FormControl size="small" sx={{ minWidth: 140 }}>
+                                                <InputLabel id="radius-select-label">Radius</InputLabel>
+                                                <Select
+                                                    labelId="radius-select-label"
+                                                    value={circleRadiusInput}
+                                                    label="Radius"
+                                                    onChange={(e) => {
+                                                        const r = Number(e.target.value);
+                                                        setCircleRadiusInput(r);
+                                                        if (circle) {
+                                                            setCircle(prev => ({ ...prev, radius: r }));
+                                                        }
+                                                    }}
+                                                >
+                                                    <MenuItem value={10}>10 meters</MenuItem>
+                                                    <MenuItem value={20}>20 meters</MenuItem>
+                                                    <MenuItem value={30}>30 meters</MenuItem>
+                                                    <MenuItem value={50}>50 meters</MenuItem>
+                                                    <MenuItem value={100}>100 meters</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                        )}
+                                    </div>
                                     {
-                                        !polygons?.length > 0 ? (
-                                            <Tooltip placement="bottom" arrow title="Add Geofence">
-                                                <div style={{ backgroundColor: theme.palette.primary.main }} className={`p-2 rounded-full text-white flex justify-center cursor-pointer`}
+                                        ((geofenceType === 'circle' && !circle) || (geofenceType === 'polygon' && polygons?.length === 0)) ? (
+                                            <Tooltip placement="bottom" arrow title={geofenceType === 'circle' ? "Place Circle center" : "Draw Polygon"}>
+                                                <div
+                                                    style={{ backgroundColor: isDrawing ? theme.palette.secondary.main : theme.palette.primary.main }}
+                                                    className={`p-2 rounded-full text-white flex justify-center cursor-pointer transition-colors duration-200`}
                                                     onClick={toggleDrawingMode}
                                                 >
-                                                    <CustomIcons iconName={'fa-solid fa-plus'} css='cursor-pointer h-4 w-4' />
+                                                    <CustomIcons iconName={isDrawing ? 'fa-solid fa-ban' : 'fa-solid fa-plus'} css='cursor-pointer h-4 w-4' />
                                                 </div>
                                             </Tooltip>
                                         ) : null
@@ -379,36 +544,47 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
                                         <tr className="border-b border-gray-300">
                                             <th className="px-4 py-2 text-left">#</th>
                                             <th className="px-4 py-2 text-left">Tag</th>
-                                            <th className="px-4 py-2 text-left">Points Count</th>
+                                            <th className="px-4 py-2 text-left">Details</th>
                                             <th className="px-4 py-2 text-left">Actions</th>
                                         </tr>
                                     </thead>
-                                    {
-                                        polygons?.length > 0 ? (
-                                            <tbody>
-                                                {polygons?.map((polygon, index) => (
-                                                    <tr key={index} className="border-b border-gray-300">
-                                                        <td className="px-4 py-2">{index + 1}</td>
-                                                        <td className="px-4 py-2">{polygon.tag || '-'}</td>
-                                                        <td className="px-4 py-2">{polygon.path?.length}</td>
-                                                        <td className="px-4 py-2">
-                                                            <div
-                                                                className="h-8 w-8 flex justify-center items-center bg-red-600 cursor-pointer rounded-full text-white"
-                                                                onClick={() => handleOpenDialog(polygon.id)}
-                                                            >
-                                                                <CustomIcons iconName="fa-solid fa-trash" css="cursor-pointer" />
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        ) :
-                                            <tbody>
-                                                <tr style={{ color: theme.palette.primary.text.main, }} className='text-center text-red-500 font-semibold capitalize h-10'>
-                                                    <td colSpan={4}> No polygons found</td>
+                                    <tbody>
+                                        {geofenceType === 'circle' && circle ? (
+                                            <tr className="border-b border-gray-300">
+                                                <td className="px-4 py-2">1</td>
+                                                <td className="px-4 py-2">{circle.tag || '-'}</td>
+                                                <td className="px-4 py-2">Circle (Radius: {circle.radius}m)</td>
+                                                <td className="px-4 py-2">
+                                                    <div
+                                                        className="h-8 w-8 flex justify-center items-center bg-red-600 cursor-pointer rounded-full text-white"
+                                                        onClick={() => handleOpenDialog(circle.id)}
+                                                    >
+                                                        <CustomIcons iconName="fa-solid fa-trash" css="cursor-pointer" />
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : geofenceType === 'polygon' && polygons?.length > 0 ? (
+                                            polygons.map((polygon, index) => (
+                                                <tr key={index} className="border-b border-gray-300">
+                                                    <td className="px-4 py-2">{index + 1}</td>
+                                                    <td className="px-4 py-2">{polygon.tag || '-'}</td>
+                                                    <td className="px-4 py-2">Polygon ({polygon.path?.length} points)</td>
+                                                    <td className="px-4 py-2">
+                                                        <div
+                                                            className="h-8 w-8 flex justify-center items-center bg-red-600 cursor-pointer rounded-full text-white"
+                                                            onClick={() => handleOpenDialog(polygon.id)}
+                                                        >
+                                                            <CustomIcons iconName="fa-solid fa-trash" css="cursor-pointer" />
+                                                        </div>
+                                                    </td>
                                                 </tr>
-                                            </tbody>
-                                    }
+                                            ))
+                                        ) : (
+                                            <tr style={{ color: theme.palette.primary.text.main, }} className='text-center text-red-500 font-semibold capitalize h-10'>
+                                                <td colSpan={4}>No geofences found</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
                                 </table>
 
                             </div>
@@ -434,20 +610,10 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
                                     />
                                 )}
 
-                                {isDrawing && (
+                                {isDrawing && geofenceType === 'polygon' && (
                                     <DrawingManager
                                         onPolygonComplete={onPolygonComplete}
-                                        options={{
-                                            drawingControl: false,
-                                            polygonOptions: {
-                                                fillColor: '#2196F3',
-                                                fillOpacity: 0.5,
-                                                strokeWeight: 2,
-                                                clickable: true,
-                                                editable: true,
-                                                zIndex: 1,
-                                            },
-                                        }}
+                                        options={drawingManagerOptions}
                                         onLoad={(drawingManager) => {
                                             drawingManagerRef.current = drawingManager;
                                             drawingManager.setDrawingMode('polygon');
@@ -458,7 +624,7 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
                                     />
                                 )}
 
-                                {polygons?.map((polygon) => {
+                                {geofenceType === 'polygon' && polygons?.map((polygon) => {
                                     const polygonId = polygon.id || `poly-${JSON.stringify(polygon.path)}`;
                                     return (
                                         <Polygon
@@ -466,18 +632,25 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
                                             onLoad={(instance) => polygonRefs.current.set(polygonId, instance)}
                                             onUnmount={() => polygonRefs.current.delete(polygonId)}
                                             path={polygon.path}
-                                            options={{
-                                                fillColor: '#2196F3',
-                                                fillOpacity: 0.5,
-                                                strokeWeight: 2,
-                                                editable: true,
-                                                draggable: true
-                                            }}
+                                            options={polygonOptions}
                                             onDragEnd={() => handlePolygonEdit(polygonId)}
                                             onMouseUp={() => handlePolygonEdit(polygonId)}
                                         />
                                     );
                                 })}
+
+                                {geofenceType === 'circle' && circle && (
+                                    <Circle
+                                        key={circle.id}
+                                        center={circle.center}
+                                        radius={circle.radius}
+                                        onLoad={onCircleLoad}
+                                        onUnmount={onCircleUnmount}
+                                        onCenterChanged={handleCircleCenterChanged}
+                                        onRadiusChanged={handleCircleRadiusChanged}
+                                        options={circleOptions}
+                                    />
+                                )}
                             </GoogleMap>
                         </div>
                     </div>
@@ -485,7 +658,13 @@ const AddGeofences = ({ setAlert, open, handleClose, selectedLocationRow, compan
 
                 <Components.DialogActions>
                     <div className='flex justify-end'>
-                        <Button type={`button`} text={selectedLocationRow?.geofenceId ? "Update Geofences" : "Create Geofences"} disabled={polygons?.length === 0} isLoading={loading} onClick={() => handleSubmit()} />
+                        <Button
+                            type="button"
+                            text={selectedLocationRow?.geofenceId ? "Update Geofences" : "Create Geofences"}
+                            disabled={(geofenceType === 'circle' && !circle) || (geofenceType === 'polygon' && polygons?.length === 0)}
+                            isLoading={loading}
+                            onClick={() => handleSubmit()}
+                        />
                     </div>
                 </Components.DialogActions>
 

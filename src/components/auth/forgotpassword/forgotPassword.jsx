@@ -21,7 +21,7 @@ const ForgotPassword = ({ setAlert }) => {
     } = useForm({
         defaultValues: {
             userName: '',
-            email: '',           
+            email: '',
         },
     });
 
@@ -44,7 +44,7 @@ const ForgotPassword = ({ setAlert }) => {
     };
 
     useEffect(() => {
-        document.title = "ResetPassword-TimeSheetsPro"
+        document.title = "ResetPassword-CalcSalary"
     }, [])
 
     return (

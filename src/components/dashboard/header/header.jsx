@@ -217,7 +217,7 @@ const Header = ({ handleSetCompanyLogo, companyLogo, userDetails, handleSetUserD
             const formattedLongitude = parseFloat(Number(longitude).toFixed(5));
 
             window.Radar.initialize(radarPKAPIKey);
-            window.Radar.setUserId(`timesheetspro_user_${userInfo?.employeeId}`);
+            window.Radar.setUserId(`calcsalary_user_${userInfo?.employeeId}`);
 
             const matched = await new Promise((resolve) => {
                 window.Radar.trackOnce(
@@ -432,7 +432,7 @@ const Header = ({ handleSetCompanyLogo, companyLogo, userDetails, handleSetUserD
                             {userTimeRecords?.map((entry, index) => {
                                 const parsedTimeIn = entry.timeIn ? parseDDMMYYYYTime(entry.timeIn) : null;
                                 const parsedTimeOut = entry.timeOut ? parseDDMMYYYYTime(entry.timeOut) : null;
-                                
+
                                 return (
                                     <tr key={index} className="border-b border-gray-200">
                                         <td className="p-2">{index + 1}</td>
