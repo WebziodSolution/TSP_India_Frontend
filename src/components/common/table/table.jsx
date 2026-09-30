@@ -3,7 +3,7 @@ import Input from '../input/input';
 import { useTheme } from '@mui/material';
 import CustomIcons from '../icons/CustomIcons';
 import Button from '../buttons/button';
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 
 const paginationModel = { page: 0, pageSize: 50 };
 
@@ -31,6 +31,15 @@ export default function DataTable({
     footerRowClassName
 }) {
     const theme = useTheme();
+    const [searchText, setSearchText] = useState('');
+
+    const filterModel = useMemo(() => {
+        const tokens = searchText ? searchText.trim().split(/\s+/).filter(Boolean) : [];
+        return {
+            items: [],
+            quickFilterValues: tokens,
+        };
+    }, [searchText]);
 
     // Prepare rows for DataGrid: add the footer row with a flag
     const dataGridRows = useMemo(() => {
@@ -51,41 +60,70 @@ export default function DataTable({
         return '';
     };
 
-    // Modify columns to handle rendering for the total row
+    // Modify columns to handle rendering for the total row and quick search
     const dataGridColumns = useMemo(() => {
         return columns.map(col => {
+            const enhancedCol = { ...col };
+
+            // Provide search support across cells and row objects for quick filtering
+            if (col.getApplyQuickFilterFn === undefined && col.field !== 'action') {
+                enhancedCol.getApplyQuickFilterFn = (filterItemValue) => {
+                    if (!filterItemValue) return null;
+                    const escaped = filterItemValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const regex = new RegExp(escaped, 'i');
+
+                    return (value, row, column, apiRef) => {
+                        if (row?.isTotalRow) return true;
+
+                        // 1. Direct cell value check
+                        if (value != null && regex.test(String(value))) return true;
+
+                        // 2. Formatted cell value check
+                        const formatted = apiRef?.current?.getRowFormattedValue?.(row, column);
+                        if (formatted != null && regex.test(String(formatted))) return true;
+
+                        // 3. Custom valueGetter check if column defines one
+                        if (typeof column?.valueGetter === 'function') {
+                            const val = column.valueGetter(value, row, column, apiRef);
+                            if (val != null && regex.test(String(val))) return true;
+                        }
+
+                        // 4. Raw field property check
+                        if (column?.field && row?.[column.field] != null) {
+                            if (regex.test(String(row[column.field]))) return true;
+                        }
+
+                        return false;
+                    };
+                };
+            }
+
             // For the employeeName column, show a bold label in the total row
             if (col.field === 'employeeName' && col.headerName !== '#') {
-                return {
-                    ...col,
-                    renderCell: (params) => {
-                        if (params.row.isTotalRow) {
-                            return (
-                                <span style={{ fontWeight: 'bold' }}>
-                                    {params.row.employeeName}
-                                </span>
-                            );
-                        }
-                        return col.renderCell ? col.renderCell(params) : params.value;
-                    },
+                enhancedCol.renderCell = (params) => {
+                    if (params.row.isTotalRow) {
+                        return (
+                            <span style={{ fontWeight: 'bold' }}>
+                                {params.row.employeeName}
+                            </span>
+                        );
+                    }
+                    return col.renderCell ? col.renderCell(params) : params.value;
                 };
             }
             // For financial columns, handle total row specially
             if (['basicSalary', 'otAmount', 'pfAmount', 'ptAmount', 'totalEarnings', 'otherDeductions', 'totalDeductions', 'netSalary'].includes(col.field)) {
-                return {
-                    ...col,
-                    renderCell: (params) => {
-                        if (params.row.isTotalRow) {
-                            if (['otherDeductions', 'totalEarnings', 'totalDeductions', 'netSalary'].includes(col.field)) {
-                                return <span>₹{params.value?.toLocaleString('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}</span>;
-                            }
-                            return <span></span>; // empty for other columns in total row
+                enhancedCol.renderCell = (params) => {
+                    if (params.row.isTotalRow) {
+                        if (['otherDeductions', 'totalEarnings', 'totalDeductions', 'netSalary'].includes(col.field)) {
+                            return <span>₹{params.value?.toLocaleString('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}</span>;
                         }
-                        return col.renderCell ? col.renderCell(params) : params.value;
-                    },
+                        return <span></span>; // empty for other columns in total row
+                    }
+                    return col.renderCell ? col.renderCell(params) : params.value;
                 };
             }
-            return col;
+            return enhancedCol;
         });
     }, [columns]);
 
@@ -98,7 +136,22 @@ export default function DataTable({
                             <Input
                                 name="search"
                                 label="Search"
-                                endIcon={<CustomIcons iconName={'fa-solid fa-magnifying-glass'} css='mr-3' />}
+                                placeholder="Search..."
+                                value={searchText}
+                                onChange={(e) => setSearchText(e.target.value)}
+                                endIcon={
+                                    searchText ? (
+                                        <span
+                                            onClick={() => setSearchText('')}
+                                            className="cursor-pointer text-gray-400 hover:text-gray-600 mr-2 flex items-center"
+                                            title="Clear search"
+                                        >
+                                            <CustomIcons iconName={'fa-solid fa-xmark'} css='h-4 w-4' />
+                                        </span>
+                                    ) : (
+                                        <CustomIcons iconName={'fa-solid fa-magnifying-glass'} css='mr-3' />
+                                    )
+                                }
                             />
                         </div>
                     ) : null}
@@ -126,6 +179,12 @@ export default function DataTable({
             <DataGrid
                 rows={dataGridRows}
                 columns={dataGridColumns}
+                filterModel={showSearch ? filterModel : undefined}
+                onFilterModelChange={(newModel) => {
+                    if (showSearch && newModel?.quickFilterValues) {
+                        setSearchText(newModel.quickFilterValues.join(' '));
+                    }
+                }}
                 initialState={{ pagination: { paginationModel } }}
                 pageSizeOptions={[50, 75, 100]}
                 disableRowSelectionOnClick

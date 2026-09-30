@@ -35,7 +35,6 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
     const webcamVideoRef = useRef(null);
     const capturedPhotoRef = useRef(null);
     const photoCanvasRef = useRef(null);
-    const detectionCanvasRef = useRef(null);
     const faceFrameRef = useRef(null);
     const webcamDisplayRef = useRef(null);
     const capturedDisplayRef = useRef(null);
@@ -143,10 +142,6 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
                     countdownIntervalRef.current = null;
                     countdownActiveRef.current = false;
                 }
-                if (detectionCanvasRef.current) {
-                    const ctx = detectionCanvasRef.current.getContext('2d');
-                    ctx.clearRect(0, 0, detectionCanvasRef.current.width, detectionCanvasRef.current.height);
-                }
                 return;
             }
 
@@ -156,11 +151,6 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
             };
             const resizedDetection = faceapi.resizeResults(detection, displaySize);
             const faceBox = resizedDetection.box;
-
-            if (detectionCanvasRef.current) {
-                const ctx = detectionCanvasRef.current.getContext('2d');
-                ctx.clearRect(0, 0, detectionCanvasRef.current.width, detectionCanvasRef.current.height);
-            }
 
             const frameRect = faceFrameRef.current.getBoundingClientRect();
             const videoRect = webcamVideoRef.current.getBoundingClientRect();
@@ -203,25 +193,6 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
                 if (!isPhotoAlreadyCaptured && !countdownActiveRef.current) {
                     countdownActiveRef.current = true;
                     latestDescriptorRef.current = null;
-
-                    // Pre-compute face descriptor in the background DURING the 2-second countdown
-                    // By the time countdown reaches 0, the descriptor is already finished!
-                    (async () => {
-                        try {
-                            if (webcamVideoRef.current && !webcamVideoRef.current.paused) {
-                                const fullResult = await faceapi.detectSingleFace(
-                                    webcamVideoRef.current,
-                                    new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.45 })
-                                ).withFaceLandmarks().withFaceDescriptor();
-
-                                if (fullResult && countdownActiveRef.current) {
-                                    latestDescriptorRef.current = JSON.stringify(Array.from(fullResult.descriptor));
-                                }
-                            }
-                        } catch (e) {
-                            console.log('Background descriptor computation:', e);
-                        }
-                    })();
 
                     let countdown = 2;
                     countdownIntervalRef.current = setInterval(() => {
@@ -319,7 +290,6 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
         if (capturedDisplayRef.current) capturedDisplayRef.current.classList.add('hidden');
         // Ensure detection elements are visible when webcam is active
         if (webcamVideoRef.current) webcamVideoRef.current.classList.remove('hidden');
-        if (detectionCanvasRef.current) detectionCanvasRef.current.classList.remove('hidden');
         if (faceFrameRef.current) faceFrameRef.current.classList.remove('hidden');
 
         try {
@@ -349,14 +319,6 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
                 webcamVideoRef.current.onloadedmetadata = async () => {
                     try {
                         await handlePlayVideo(webcamVideoRef.current);
-
-                        const displaySize = {
-                            width: webcamVideoRef.current.offsetWidth,
-                            height: webcamVideoRef.current.offsetHeight
-                        };
-                        if (detectionCanvasRef.current) {
-                            faceapi.matchDimensions(detectionCanvasRef.current, displaySize);
-                        }
                     } catch (err) {
                         console.error('onloadedmetadata: Error in handler:', err);
                         showMessage(setRegisterMessage, 'Error starting webcam. Please try again.', 'error');
@@ -429,25 +391,6 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
             setCapturedImageDataURL(dataURL);
             if (capturedPhotoRef.current) capturedPhotoRef.current.src = dataURL;
 
-            // Check pre-computed descriptor from countdown
-            let descriptor = latestDescriptorRef.current;
-
-            // Fallback: If not ready yet, compute once directly from video
-            if (!descriptor && webcamVideoRef.current) {
-                try {
-                    const directResult = await faceapi.detectSingleFace(
-                        webcamVideoRef.current,
-                        new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 })
-                    ).withFaceLandmarks().withFaceDescriptor();
-
-                    if (directResult) {
-                        descriptor = JSON.stringify(Array.from(directResult.descriptor));
-                    }
-                } catch (err) {
-                    console.error("Direct descriptor extraction fallback:", err);
-                }
-            }
-
             // --- VISIBILITY CONTROL ---
             webcamDisplayRef.current?.classList.add('hidden'); // Hide webcam
             capturedDisplayRef.current?.classList.remove('hidden'); // Show captured photo
@@ -484,12 +427,30 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
             }
             countdownActiveRef.current = false;
 
-            if (descriptor) {
-                setFaceDescriptor(descriptor);
-                latestDescriptorRef.current = descriptor;
-                showMessage(setRegisterMessage, 'Face captured successfully! You can now proceed.', 'success');
-            } else {
-                showMessage(setRegisterMessage, 'Could not extract face details clearly. Please retake photo.', 'warning');
+            // Extract 512D ArcFace descriptor from backend InsightFace service
+            showMessage(setRegisterMessage, 'Analyzing face and extracting 512D descriptor...', 'info');
+            try {
+                const imageBlob = dataURLtoBlob(dataURL);
+                const extractFormData = new FormData();
+                extractFormData.append('image', imageBlob, 'face.jpg');
+
+                const extractRes = await fetch(`${API_BASE_URL}/extract-descriptor`, {
+                    method: 'POST',
+                    body: extractFormData,
+                });
+                const extractData = await extractRes.json();
+
+                if (extractData.success && extractData.descriptor) {
+                    const desc512 = JSON.stringify(extractData.descriptor);
+                    setFaceDescriptor(desc512);
+                    latestDescriptorRef.current = desc512;
+                    showMessage(setRegisterMessage, 'Face captured and 512D descriptor generated successfully! You can now proceed.', 'success');
+                } else {
+                    showMessage(setRegisterMessage, extractData.detail || 'Could not extract 512D face details. Please retake photo.', 'warning');
+                }
+            } catch (err) {
+                console.error("Error extracting 512D descriptor:", err);
+                showMessage(setRegisterMessage, 'Photo captured, but server could not extract 512D descriptor. Please retake.', 'warning');
             }
         } catch (err) {
             console.error('Error capturing photo:', err);
@@ -522,6 +483,12 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
             return;
         }
 
+        if (!faceDescriptor) {
+            setIsLoading(false);
+            showMessage(setRegisterMessage, 'Please wait for the 512D face descriptor to finish generating, or retake photo.', 'warning');
+            return;
+        }
+
         const formData = new FormData();
 
         const isLogin = type === "login";
@@ -537,7 +504,7 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
             console.error('Error converting dataURL to blob:', e);
         }
 
-        // Also send base64 data and descriptor for maximum server compatibility
+        // Also send base64 data and 512D descriptor for server compatibility
         formData.append('image_base64', capturedImageDataURL);
         if (faceDescriptor) {
             formData.append('faceDescriptor', faceDescriptor);
@@ -667,11 +634,6 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
                                     muted
                                     playsInline
                                     className="absolute top-0 left-0 w-full h-full object-cover -scale-x-100"
-                                />
-                                <canvas
-                                    id="detectionCanvas"
-                                    ref={detectionCanvasRef}
-                                    className="absolute top-0 left-0 w-full h-full -scale-x-100"
                                 />
                                 <div
                                     className="face-frame absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-60 md:w-52 h-4/5 md:max-w-[25rem] max-h-[32rem] border-2 border-opacity-80 border-red-500 rounded-xl pointer-events-none z-10 transition-colors"

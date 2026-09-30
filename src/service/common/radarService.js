@@ -156,6 +156,19 @@ export const requestLocationPermission = async () => {
     } catch (error) {
         console.error('Permission error:', error);
 
+        const msg = error?.message || '';
+        const isGloballyDisabled =
+            msg.toLowerCase().includes('disabled') ||
+            msg.toLowerCase().includes('not enabled');
+
+        if (isGloballyDisabled) {
+            return {
+                location: 'denied',
+                error: 'LOCATION_DISABLED',
+                message: 'Location services (GPS) are turned off on your device. Please turn on GPS/location services in your system settings to proceed.'
+            };
+        }
+
         return {
             location: 'denied',
             error: error?.message || 'LOCATION_PERMISSION_ERROR'
@@ -287,6 +300,18 @@ export const getAccurateLocation = async () => {
 
     } catch (error) {
         console.error('Location error:', error);
+
+        const msg = error?.message || '';
+        const isGloballyDisabled =
+            msg.toLowerCase().includes('disabled') ||
+            msg.toLowerCase().includes('not enabled');
+
+        if (isGloballyDisabled) {
+            return {
+                error: 'LOCATION_DISABLED',
+                message: 'Location services (GPS) are turned off on your device. Please turn on GPS/location services in your system settings to proceed.'
+            };
+        }
 
         return {
             error: 'UNKNOWN_ERROR',

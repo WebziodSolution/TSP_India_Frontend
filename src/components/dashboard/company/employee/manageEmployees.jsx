@@ -81,6 +81,9 @@ const ManageEmployees = ({ handleSetTitle, setAlert }) => {
             headerClassName: 'uppercase',
             flex: 1,
             maxWidth: 300,
+            valueGetter: (value, row) => {
+                return `${row?.userName || ''} ${row?.firstName || ''} ${row?.middleName || ''} ${row?.lastName || ''}`.trim();
+            },
             renderCell: (params) => {
                 return (
                     <div className='flex justify-start gap-3 items-center my-2'>
@@ -122,6 +125,9 @@ const ManageEmployees = ({ handleSetTitle, setAlert }) => {
             headerClassName: 'uppercase',
             flex: 1,
             minWidth: 90,
+            valueGetter: (value, row) => {
+                return row?.companyShiftDto?.shiftType || "";
+            },
             renderCell: (params) => {
                 return (
                     <p className='text-sm my-4'>
@@ -136,6 +142,9 @@ const ManageEmployees = ({ handleSetTitle, setAlert }) => {
             headerClassName: 'uppercase',
             flex: 1,
             minWidth: 90,
+            valueGetter: (value, row) => {
+                return row?.companyEmployeeRolesDto?.roleName || "";
+            },
             renderCell: (params) => {
                 return (
                     <p className='text-sm my-4'>
@@ -149,6 +158,7 @@ const ManageEmployees = ({ handleSetTitle, setAlert }) => {
             field: 'action',
             headerName: 'Action',
             headerClassName: 'uppercase',
+            filterable: false,
             renderCell: (params) => {
                 return (
                     <div className='flex items-center gap-2 justify-center h-full'>
@@ -211,7 +221,7 @@ const ManageEmployees = ({ handleSetTitle, setAlert }) => {
     return (
         <div className='px-3 lg:px-0'>
             <div className='border rounded-lg bg-white lg:w-full'>
-                <DataTable columns={columns} rows={employees} getRowId={getRowId} showSearch={false} showButtons={true} buttons={employeeActionButtons} />
+                <DataTable columns={columns} rows={employees} getRowId={getRowId} showSearch={true} showButtons={true} buttons={employeeActionButtons} />
             </div>
             <AlertDialog open={dialog.open} title={dialog.title} message={dialog.message} actionButtonText={dialog.actionButtonText} handleAction={handleDeleteEmployee} handleClose={handleCloseDialog} loading={loading} />
         </div>
