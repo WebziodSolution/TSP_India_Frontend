@@ -12,7 +12,11 @@ const DrawerMenu = ({ title, handleSetTitle, handleDrawerClose, drawerWidth, set
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md')); // md ~ 960px
   const { window } = props;
-  const [openChild, setOpenChild] = useState(null);
+  const [openChild, setOpenChild] = useState({
+    Reports: true,
+    Permissions: true,
+    Settings: true,
+  });
   const userInfo = JSON.parse(localStorage.getItem("userInfo"))
 
   const [items, setItems] = useState([])
@@ -142,9 +146,12 @@ const DrawerMenu = ({ title, handleSetTitle, handleDrawerClose, drawerWidth, set
 
   };
 
-  const handleToggleChild = (name, index) => {
+  const handleToggleChild = (name) => {
     // setSelectedNavItem(name)
-    setOpenChild((prevOpenChild) => (prevOpenChild === index ? null : index));
+    setOpenChild((prev) => ({
+      ...prev,
+      [name]: !prev?.[name]
+    }));
   };
 
   const container = window !== undefined ? () => window().document.body : undefined;
@@ -190,7 +197,7 @@ const DrawerMenu = ({ title, handleSetTitle, handleDrawerClose, drawerWidth, set
                 {
                   !item.child ? (
                     <NavLink className="w-full" to={`/dashboard/${item.name === "Dashboard" ? "main" : item?.name?.toLowerCase()?.split(' ').join('')}`} key={index} onClick={() => { handleSetTitle(item.name === "Manage User" ? title : item.name); if (isMobile) handleDrawerClose() }}>
-                      <Components.ListItemButton onClick={() => handleToggleChild(item.name, index)} >
+                      <Components.ListItemButton onClick={() => handleToggleChild(item.name)} >
                         <Components.ListItemIcon sx={{ color: (title === item.name || (item.name === "Manage Employees" && (title === "Add Employee" || title === "Update Employee")) || (item.name === "PF Report" && title === "PF Report") || (item.name === "PT Report" && title === "PT Report")) ? "white" : '' }}>
                           {item.icon}
                         </Components.ListItemIcon>
@@ -198,7 +205,7 @@ const DrawerMenu = ({ title, handleSetTitle, handleDrawerClose, drawerWidth, set
                         {
                           item.child?.length > 0 ? (
                             <>
-                              {openChild === index ? (
+                              {openChild?.[item.name] ? (
                                 <CustomIcons iconName={'fa-solid fa-angle-down'} css=' cursor-pointer' />
                               ) : (
                                 <CustomIcons iconName={'fa-solid fa-angle-right'} css=' cursor-pointer' />
@@ -210,7 +217,7 @@ const DrawerMenu = ({ title, handleSetTitle, handleDrawerClose, drawerWidth, set
                       </Components.ListItemButton>
                     </NavLink>
                   ) :
-                    <Components.ListItemButton sx={{ backgroundColor: openChild === index ? "#E7E7EA" : "", borderRadius: '8px', transition: 'all 0.2s ease', '& .MuiListItemButton-gutters:hover': { background: openChild === index ? "#E7E7EA" : "" }, height: 45 }} onClick={() => handleToggleChild(item.name, index)} >
+                    <Components.ListItemButton sx={{ backgroundColor: openChild?.[item.name] ? "#E7E7EA" : "", borderRadius: '8px', transition: 'all 0.2s ease', '& .MuiListItemButton-gutters:hover': { background: openChild?.[item.name] ? "#E7E7EA" : "" }, height: 45 }} onClick={() => handleToggleChild(item.name)} >
                       <Components.ListItemIcon sx={{ color: title === item.name ? "white" : '' }}>
                         {item.icon}
                       </Components.ListItemIcon>
@@ -218,7 +225,7 @@ const DrawerMenu = ({ title, handleSetTitle, handleDrawerClose, drawerWidth, set
                       {
                         item.child?.length > 0 ? (
                           <>
-                            {openChild === index ? (
+                            {openChild?.[item.name] ? (
                               <CustomIcons iconName={'fa-solid fa-angle-down'} css=' cursor-pointer' />
                             ) : (
                               <CustomIcons iconName={'fa-solid fa-angle-right'} css=' cursor-pointer' />
@@ -232,7 +239,7 @@ const DrawerMenu = ({ title, handleSetTitle, handleDrawerClose, drawerWidth, set
 
               </Components.ListItem>
               {item?.child?.length > 0 && (
-                <Components.Collapse in={openChild === index} timeout="auto" unmountOnExit style={{ marginTop: 2 }}>
+                <Components.Collapse in={Boolean(openChild?.[item.name])} timeout="auto" unmountOnExit style={{ marginTop: 2 }}>
                   <Components.List component="div" disablePadding>
                     {item.child?.map((row, rowIndex) => (
                       <NavLink to={`/dashboard/${row?.name?.toLowerCase()?.replace(/\s+/g, "")}`} key={rowIndex} onClick={() => { handleSetTitle(row?.name === "Manage User" ? title : row?.name); if (isMobile) handleDrawerClose() }}>

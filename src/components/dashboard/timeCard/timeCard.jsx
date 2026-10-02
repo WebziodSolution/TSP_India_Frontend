@@ -110,6 +110,7 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
     const sumTimeStrings = (items, field) => {
         let totalMinutes = 0;
         items.forEach(item => {
+            if (item?.status === 'H' || item?.status === 'W') return;
             const timeStr = item[field];
             if (timeStr && typeof timeStr === 'string' && timeStr.includes(':')) {
                 const [hours, minutes] = timeStr.split(':').map(Number);
@@ -507,7 +508,11 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             align: "left",
             headerAlign: "left",
             renderCell: (params) => {
-                return <div>{params?.row?.regular}</div>;
+                const isTotalRow = params.row?.id?.toString().startsWith('total-');
+                if (!isTotalRow && (params.row?.status === 'H' || params.row?.status === 'W')) {
+                    return <div>-</div>;
+                }
+                return <div>{params?.row?.regular || '-'}</div>;
             },
         },
         {
@@ -520,6 +525,10 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             align: "left",
             headerAlign: "left",
             renderCell: (params) => {
+                const isTotalRow = params.row?.id?.toString().startsWith('total-');
+                if (!isTotalRow && (params.row?.status === 'H' || params.row?.status === 'W')) {
+                    return <span>-</span>;
+                }
                 const timeIn = params.row?.timeIn ? parseDDMMYYYYTime(params.row.timeIn) : null;
                 return timeIn ? (
                     <div>
@@ -543,6 +552,10 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             align: "left",
             headerAlign: "left",
             renderCell: (params) => {
+                const isTotalRow = params.row?.id?.toString().startsWith('total-');
+                if (!isTotalRow && (params.row?.status === 'H' || params.row?.status === 'W')) {
+                    return <span>-</span>;
+                }
                 const timeOut = params.row?.timeOut ? parseDDMMYYYYTime(params.row.timeOut) : null;
                 return timeOut ? (
                     <div>
@@ -565,6 +578,13 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             minWidth: 100,
             align: "left",
             headerAlign: "left",
+            renderCell: (params) => {
+                const isTotalRow = params.row?.id?.toString().startsWith('total-');
+                if (!isTotalRow && (params.row?.status === 'H' || params.row?.status === 'W')) {
+                    return <div>-</div>;
+                }
+                return <div>{params.row?.totalHours || '-'}</div>;
+            },
         },
         {
             field: 'breakTime',
@@ -575,6 +595,13 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             minWidth: 100,
             align: "left",
             headerAlign: "left",
+            renderCell: (params) => {
+                const isTotalRow = params.row?.id?.toString().startsWith('total-');
+                if (!isTotalRow && (params.row?.status === 'H' || params.row?.status === 'W')) {
+                    return <div>-</div>;
+                }
+                return <div>{params.row?.breakTime || '-'}</div>;
+            },
         },
         {
             field: 'overtime',
@@ -585,6 +612,13 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             minWidth: 80,
             align: "left",
             headerAlign: "left",
+            renderCell: (params) => {
+                const isTotalRow = params.row?.id?.toString().startsWith('total-');
+                if (!isTotalRow && (params.row?.status === 'H' || params.row?.status === 'W')) {
+                    return <div>-</div>;
+                }
+                return <div>{params.row?.overtime || '-'}</div>;
+            },
         },
         {
             field: 'workHours',
@@ -595,6 +629,13 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             minWidth: 100,
             align: "left",
             headerAlign: "left",
+            renderCell: (params) => {
+                const isTotalRow = params.row?.id?.toString().startsWith('total-');
+                if (!isTotalRow && (params.row?.status === 'H' || params.row?.status === 'W')) {
+                    return <div>-</div>;
+                }
+                return <div>{params.row?.workHours || '-'}</div>;
+            },
         },
         {
             field: 'status',
@@ -606,6 +647,8 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             align: "left",
             headerAlign: "left",
             renderCell: (params) => {
+                const isTotalRow = params.row?.id?.toString().startsWith('total-');
+                if (isTotalRow) return <span>-</span>;
                 const status = params.row?.status;
                 let color = 'inherit';
                 let fontWeight = 'normal';
@@ -640,6 +683,9 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
                 if (!rowId) return null; // no id, don't render actions
                 if (typeof rowId === 'string' && rowId.startsWith('total-')) {
                     return null; // hide actions for total rows
+                }
+                if (params.row?.status === 'H' || params.row?.status === 'W') {
+                    return null;
                 }
                 // For all other rows (ids can be numbers or strings), show actions
                 return (

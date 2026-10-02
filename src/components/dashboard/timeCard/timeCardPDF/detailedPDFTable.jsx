@@ -160,6 +160,7 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, 
     const sumTimeField = (entries, field) => {
         let totalMinutes = 0;
         entries.forEach(row => {
+            if (row?.status === 'H' || row?.status === 'W') return;
             const val = row[field];
             if (val && typeof val === 'string' && val.includes(':')) {
                 const [h, m] = val.split(':').map(Number);
@@ -233,6 +234,7 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, 
                                         ) : (
                                             <>
                                                 {entries.map((row, i) => {
+                                                    const isOff = row?.status === 'H' || row?.status === 'W';
                                                     const timeIn = row?.timeIn ? parseDDMMYYYYTime(row.timeIn) : null;
                                                     const timeOut = row?.timeOut ? parseDDMMYYYYTime(row.timeOut) : null;
                                                     const isSecondary = row?.totalHours === "";
@@ -241,17 +243,17 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, 
                                                     return (
                                                         <tr key={i} className="border border-black">
                                                             <td className="border border-black text-center text-sm h-10">{day}</td>
-                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : (row.regular || '-')}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : (isOff ? '-' : (row.regular || '-'))}</td>
                                                             <td className="border border-black text-center text-sm h-10">
-                                                                {timeIn ? timeIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
+                                                                {isSecondary ? "" : (isOff ? '-' : (timeIn ? timeIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'))}
                                                             </td>
                                                             <td className="border border-black text-center text-sm h-10">
-                                                                {timeOut ? timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
+                                                                {isSecondary ? "" : (isOff ? '-' : (timeOut ? timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'))}
                                                             </td>
-                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : (row.totalHours || '-')}</td>
-                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : (row.breakTime || '-')}</td>
-                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : (row.overtime || '-')}</td>
-                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : (row.workHours || '-')}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : (isOff ? '-' : (row.totalHours || '-'))}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : (isOff ? '-' : (row.breakTime || '-'))}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : (isOff ? '-' : (row.overtime || '-'))}</td>
+                                                            <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : (isOff ? '-' : (row.workHours || '-'))}</td>
                                                             <td className="border border-black text-center text-sm h-10">{isSecondary ? "" : renderStatus(row.status)}</td>
                                                         </tr>
                                                     );
@@ -344,6 +346,7 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, 
                                     ) : (
                                         <>
                                             {records.map((record, i) => {
+                                                const isOff = record?.status === 'H' || record?.status === 'W';
                                                 const timeIn = record?.timeIn ? parseDDMMYYYYTime(record.timeIn) : null;
                                                 const timeOut = record?.timeOut ? parseDDMMYYYYTime(record.timeOut) : null;
                                                 const createdOn = handleFormateUTCDateToLocalDate(record?.createdOn);
@@ -351,17 +354,17 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, 
                                                 return (
                                                     <tr key={i} className="border border-black">
                                                         <td className="border border-black text-center text-sm h-10">{createdOn}</td>
-                                                        <td className="border border-black text-center text-sm h-10">{record?.regular || '-'}</td>
+                                                        <td className="border border-black text-center text-sm h-10">{isOff ? '-' : (record?.regular || '-')}</td>
                                                         <td className="border border-black text-center text-sm h-10">
-                                                            {timeIn ? timeIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
+                                                            {isOff ? '-' : (timeIn ? timeIn.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-')}
                                                         </td>
                                                         <td className="border border-black text-center text-sm h-10">
-                                                            {timeOut ? timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}
+                                                            {isOff ? '-' : (timeOut ? timeOut.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-')}
                                                         </td>
-                                                        <td className="border border-black text-center text-sm h-10">{record?.totalHours || '-'}</td>
-                                                        <td className="border border-black text-center text-sm h-10">{record?.breakTime || '-'}</td>
-                                                        <td className="border border-black text-center text-sm h-10">{record?.overtime || '-'}</td>
-                                                        <td className="border border-black text-center text-sm h-10">{record?.workHours || '-'}</td>
+                                                        <td className="border border-black text-center text-sm h-10">{isOff ? '-' : (record?.totalHours || '-')}</td>
+                                                        <td className="border border-black text-center text-sm h-10">{isOff ? '-' : (record?.breakTime || '-')}</td>
+                                                        <td className="border border-black text-center text-sm h-10">{isOff ? '-' : (record?.overtime || '-')}</td>
+                                                        <td className="border border-black text-center text-sm h-10">{isOff ? '-' : (record?.workHours || '-')}</td>
                                                         <td className="border border-black text-center text-sm h-10">{renderStatus(record?.status)}</td>
                                                     </tr>
                                                 );
