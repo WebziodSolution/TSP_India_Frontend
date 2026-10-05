@@ -123,6 +123,17 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
         return `${hrs} hr ${mins} min`;
     };
 
+    const sumNumberField = (items, field) => {
+        let total = 0;
+        items.forEach(item => {
+            const val = parseFloat(item[field]);
+            if (!isNaN(val)) {
+                total += val;
+            }
+        });
+        return Math.round(total);
+    };
+
     const createUserTotalRow = (user) => {
         const entries = user.data || [];
         return {
@@ -131,10 +142,11 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             rowId: '',
             timeIn: '',
             timeOut: '',
-            regular: sumTimeStrings(entries, 'regular'),
-            overtime: sumTimeStrings(entries, 'overtime'),
-            totalHours: sumTimeStrings(entries, 'totalHours'),
             workHours: sumTimeStrings(entries, 'workHours'),
+            status: '',
+            todaySalary: sumNumberField(entries, 'todaySalary'),
+            foodCharge: sumNumberField(entries, 'foodCharge'),
+            netSalary: sumNumberField(entries, 'netSalary'),
             action: '',
         };
     };
@@ -174,14 +186,41 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
 
     const parseDDMMYYYYTime = (s) => {
         if (!s) return null;
-        const [datePart, timePartRaw] = s.split(",").map(t => t.trim());
-        if (!datePart || !timePartRaw) return null;
-        const [dd, mm, yyyy] = datePart.split("/").map(Number);
-        const [timePart, ampm] = timePartRaw.split(" ");
-        let [hh, min, ss] = timePart.split(":").map(Number);
-        if (ampm === "PM" && hh < 12) hh += 12;
-        if (ampm === "AM" && hh === 12) hh = 0;
-        return new Date(yyyy, mm - 1, dd, hh, min, ss);
+        if (s instanceof Date) return s;
+        if (typeof s !== "string") return null;
+        if (s.includes(",")) {
+            const [datePart, timePartRaw] = s.split(",").map(t => t.trim());
+            if (datePart && timePartRaw) {
+                const [dd, mm, yyyy] = datePart.split("/").map(Number);
+                const [timePart, ampm] = timePartRaw.split(" ");
+                if (timePart) {
+                    let [hh, min, ss] = timePart.split(":").map(Number);
+                    if (ampm === "PM" && hh < 12) hh += 12;
+                    if (ampm === "AM" && hh === 12) hh = 0;
+                    return new Date(yyyy, mm - 1, dd, hh || 0, min || 0, ss || 0);
+                }
+            }
+        }
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? null : d;
+    };
+
+    const formatDateTime = (s) => {
+        const d = parseDDMMYYYYTime(s);
+        if (!d || isNaN(d.getTime())) return null;
+        const day = String(d.getDate()).padStart(2, "0");
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const year = d.getFullYear();
+        const dateStr = `${day}/${month}/${year}`;
+
+        let hours = d.getHours();
+        const minutes = String(d.getMinutes()).padStart(2, "0");
+        const ampm = hours >= 12 ? "PM" : "AM";
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        const timeStr = `${String(hours).padStart(2, "0")}:${minutes} ${ampm}`;
+
+        return { dateStr, timeStr };
     };
 
     // --- Data fetching functions ---
@@ -495,129 +534,57 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             align: "left",
             headerAlign: "left",
             renderCell: (params) => {
+                const isTotalRow = params.row?.id?.toString().startsWith('total-');
+                if (isTotalRow) return <div className="font-bold">Total</div>;
                 return <div>{handleFormateUTCDateToLocalDate(params.row?.createdOn)}</div>;
             },
         },
         {
-            field: 'regular',
-            headerName: 'regular(HR)',
-            headerClassName: 'uppercase',
-            flex: 1,
-            maxWidth: 120,
-            minWidth: 90,
-            align: "left",
-            headerAlign: "left",
-            renderCell: (params) => {
-                const isTotalRow = params.row?.id?.toString().startsWith('total-');
-                if (!isTotalRow && (params.row?.status === 'H' || params.row?.status === 'W')) {
-                    return <div>-</div>;
-                }
-                return <div>{params?.row?.regular || '-'}</div>;
-            },
-        },
-        {
             field: 'timeIn',
-            headerName: 'timein',
+            headerName: 'Clock In',
             headerClassName: 'uppercase',
             flex: 1,
-            maxWidth: 120,
-            minWidth: 100,
+            maxWidth: 135,
+            minWidth: 105,
             align: "left",
             headerAlign: "left",
             renderCell: (params) => {
                 const isTotalRow = params.row?.id?.toString().startsWith('total-');
-                if (!isTotalRow && (params.row?.status === 'H' || params.row?.status === 'W')) {
+                if (isTotalRow) return <span>-</span>;
+                if (params.row?.status === 'H' || params.row?.status === 'W') {
                     return <span>-</span>;
                 }
-                const timeIn = params.row?.timeIn ? parseDDMMYYYYTime(params.row.timeIn) : null;
-                return timeIn ? (
-                    <div>
-                        {timeIn.toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: true,
-                        })
-                        }
+                const formatted = formatDateTime(params.row?.timeIn);
+                return formatted ? (
+                    <div className="flex flex-col justify-center leading-tight py-1">
+                        <span className="text-xs text-gray-700">{formatted.dateStr}</span>
+                        <span className="text-xs font-semibold">{formatted.timeStr}</span>
                     </div>
                 ) : <span>-</span>;
             },
         },
         {
             field: 'timeOut',
-            headerName: 'timeout',
+            headerName: 'Clock Out',
             headerClassName: 'uppercase',
             flex: 1,
-            maxWidth: 120,
-            minWidth: 100,
+            maxWidth: 135,
+            minWidth: 105,
             align: "left",
             headerAlign: "left",
             renderCell: (params) => {
                 const isTotalRow = params.row?.id?.toString().startsWith('total-');
-                if (!isTotalRow && (params.row?.status === 'H' || params.row?.status === 'W')) {
+                if (isTotalRow) return <span>-</span>;
+                if (params.row?.status === 'H' || params.row?.status === 'W') {
                     return <span>-</span>;
                 }
-                const timeOut = params.row?.timeOut ? parseDDMMYYYYTime(params.row.timeOut) : null;
-                return timeOut ? (
-                    <div>
-                        {timeOut.toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: true,
-                        })
-                        }
+                const formatted = formatDateTime(params.row?.timeOut);
+                return formatted ? (
+                    <div className="flex flex-col justify-center leading-tight py-1">
+                        <span className="text-xs text-gray-700">{formatted.dateStr}</span>
+                        <span className="text-xs font-semibold">{formatted.timeStr}</span>
                     </div>
                 ) : <span>-</span>;
-            },
-        },
-        {
-            field: 'totalHours',
-            headerName: 'Total Hours',
-            headerClassName: 'uppercase',
-            flex: 1,
-            maxWidth: 130,
-            minWidth: 100,
-            align: "left",
-            headerAlign: "left",
-            renderCell: (params) => {
-                const isTotalRow = params.row?.id?.toString().startsWith('total-');
-                if (!isTotalRow && (params.row?.status === 'H' || params.row?.status === 'W')) {
-                    return <div>-</div>;
-                }
-                return <div>{params.row?.totalHours || '-'}</div>;
-            },
-        },
-        {
-            field: 'breakTime',
-            headerName: 'Break Time',
-            headerClassName: 'uppercase',
-            flex: 1,
-            maxWidth: 130,
-            minWidth: 100,
-            align: "left",
-            headerAlign: "left",
-            renderCell: (params) => {
-                const isTotalRow = params.row?.id?.toString().startsWith('total-');
-                if (!isTotalRow && (params.row?.status === 'H' || params.row?.status === 'W')) {
-                    return <div>-</div>;
-                }
-                return <div>{params.row?.breakTime || '-'}</div>;
-            },
-        },
-        {
-            field: 'overtime',
-            headerName: 'OT',
-            headerClassName: 'uppercase',
-            flex: 1,
-            maxWidth: 100,
-            minWidth: 80,
-            align: "left",
-            headerAlign: "left",
-            renderCell: (params) => {
-                const isTotalRow = params.row?.id?.toString().startsWith('total-');
-                if (!isTotalRow && (params.row?.status === 'H' || params.row?.status === 'W')) {
-                    return <div>-</div>;
-                }
-                return <div>{params.row?.overtime || '-'}</div>;
             },
         },
         {
@@ -631,10 +598,70 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             headerAlign: "left",
             renderCell: (params) => {
                 const isTotalRow = params.row?.id?.toString().startsWith('total-');
-                if (!isTotalRow && (params.row?.status === 'H' || params.row?.status === 'W')) {
+                if (isTotalRow) {
+                    return <div className="font-bold">{params.row?.workHours}</div>;
+                }
+                if (params.row?.status === 'H' || params.row?.status === 'W') {
                     return <div>-</div>;
                 }
                 return <div>{params.row?.workHours || '-'}</div>;
+            },
+        },
+        {
+            field: 'todaySalary',
+            headerName: 'Day Salary',
+            headerClassName: 'uppercase',
+            flex: 1,
+            maxWidth: 130,
+            minWidth: 100,
+            align: "left",
+            headerAlign: "left",
+            renderCell: (params) => {
+                const isTotalRow = params.row?.id?.toString().startsWith('total-');
+                const val = params.row?.todaySalary;
+                if (isTotalRow) {
+                    return <div className="font-bold">{val !== "" && val !== null && val !== undefined ? `₹${Number(val).toLocaleString('en-IN')}` : '-'}</div>;
+                }
+                if (val === "" || val === null || val === undefined) return <div>-</div>;
+                return <div>₹{Number(val).toLocaleString('en-IN')}</div>;
+            },
+        },
+        {
+            field: 'foodCharge',
+            headerName: 'Food Charge',
+            headerClassName: 'uppercase',
+            flex: 1,
+            maxWidth: 130,
+            minWidth: 100,
+            align: "left",
+            headerAlign: "left",
+            renderCell: (params) => {
+                const isTotalRow = params.row?.id?.toString().startsWith('total-');
+                const val = params.row?.foodCharge;
+                if (isTotalRow) {
+                    return <div className="font-bold">{val !== "" && val !== null && val !== undefined ? `₹${Number(val).toLocaleString('en-IN')}` : '-'}</div>;
+                }
+                if (val === "" || val === null || val === undefined) return <div>-</div>;
+                return <div>₹{Number(val).toLocaleString('en-IN')}</div>;
+            },
+        },
+        {
+            field: 'netSalary',
+            headerName: 'Net Salary',
+            headerClassName: 'uppercase',
+            flex: 1,
+            maxWidth: 130,
+            minWidth: 100,
+            align: "left",
+            headerAlign: "left",
+            renderCell: (params) => {
+                const isTotalRow = params.row?.id?.toString().startsWith('total-');
+                const val = params.row?.netSalary;
+                if (isTotalRow) {
+                    return <div className="font-bold">{val !== "" && val !== null && val !== undefined ? `₹${Number(val).toLocaleString('en-IN')}` : '-'}</div>;
+                }
+                if (val === "" || val === null || val === undefined) return <div>-</div>;
+                return <div>₹{Number(val).toLocaleString('en-IN')}</div>;
             },
         },
         {
@@ -642,32 +669,46 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             headerName: 'Status',
             headerClassName: 'uppercase',
             flex: 1,
-            maxWidth: 100,
-            minWidth: 80,
-            align: "left",
-            headerAlign: "left",
+            maxWidth: 60,
+            minWidth: 60,
+            align: "center",
+            headerAlign: "center",
             renderCell: (params) => {
                 const isTotalRow = params.row?.id?.toString().startsWith('total-');
                 if (isTotalRow) return <span>-</span>;
                 const status = params.row?.status;
-                let color = 'inherit';
-                let fontWeight = 'normal';
-                if (status === 'A') {
-                    color = '#ff0000';
-                    fontWeight = 'bold';
+                if (!status) return <span>-</span>;
+
+                let color = '#374151';
+                let bg = '#f3f4f6';
+                if (status === 'P') {
+                    color = '#15803d';
+                    bg = '#dcfce7';
+                } else if (status === 'A') {
+                    color = '#b91c1c';
+                    bg = '#fee2e2';
                 } else if (status === 'W') {
-                    color = '#19ff13';
-                    fontWeight = 'bold';
+                    color = '#2563eb';
+                    bg = '#dbeafe';
                 } else if (status === 'H') {
-                    color = '#ff8443';
-                    fontWeight = 'bold';
+                    color = '#c2410c';
+                    bg = '#ffedd5';
+                } else if (status === 'PW') {
+                    color = '#4338ca';
+                    bg = '#e0e7ff';
                 }
-                else if (status === 'PW') {
-                    color = '#0303fc';
-                    fontWeight = 'bold';
-                }
-                return <span style={{ color, fontWeight }}>{status || '-'}</span>;
-            }
+
+                return (
+                    <span
+                        style={{
+                            color,
+                            fontWeight: 700,
+                        }}
+                    >
+                        {status}
+                    </span>
+                );
+            },
         },
         {
             field: 'action',
@@ -722,7 +763,7 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
 
     const groupedColumns = columns
         .map(col => {
-            // Remove maxWidth so the 9 remaining columns fill the full table width evenly
+            // Remove maxWidth so the remaining columns fill the full table width evenly
             // eslint-disable-next-line no-unused-vars
             const { maxWidth, ...rest } = col;
 
@@ -732,7 +773,8 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
                 return {
                     ...rest,
                     renderCell: (params) => {
-                        if (params.row?.totalHours === "") {
+                        const isTotalRow = params.row?.id?.toString().startsWith('total-');
+                        if (!isTotalRow && params.row?.totalHours === "") {
                             return <div></div>;
                         }
                         if (originalRender) {
@@ -950,6 +992,17 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
                                             <span>Absent: {user.absentCount || '0'}</span>
                                             <span>Weekly-Off: {user.weeklyOffCount || '0'}</span>
                                             <span>Holiday: {user.holidayCount || '0'}</span>
+                                            {(() => {
+                                                const hourly = user.hourlyRate ?? user.hourRate ?? user.data?.find(r => r?.hourlyRate != null && Number(r?.hourlyRate) > 0)?.hourlyRate;
+                                                if (hourly != null && Number(hourly) > 0) {
+                                                    return <span>Hourly Rate: ₹{Number(hourly).toLocaleString('en-IN')}</span>;
+                                                }
+                                                const daySal = user.daySalary ?? user.data?.find(r => r?.todaySalary != null && Number(r?.todaySalary) > 0)?.todaySalary;
+                                                if (daySal != null && Number(daySal) > 0) {
+                                                    return <span>Day Salary: ₹{Number(daySal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
+                                                }
+                                                return null;
+                                            })()}
                                         </p>
                                     </div>
                                 </div>

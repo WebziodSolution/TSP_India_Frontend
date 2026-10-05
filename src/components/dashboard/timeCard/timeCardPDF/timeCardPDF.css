@@ -1,50 +1,163 @@
 /* Each user section = a PDF page */
 .pdf-page {
-    break-after: page;
-    /* modern */
-    page-break-after: always;
-    /* legacy */
-    break-inside: avoid;
-    
-    /* Fixed A4 width and min-height at 96 DPI */
-    width: 794px !important;
-    min-height: 1123px !important;
-    padding: 30px !important;
-    box-sizing: border-box !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: flex-start !important;
-    background-color: #ffffff !important;
-    position: relative !important;
+  break-after: page;
+  /* modern */
+  page-break-after: always;
+  /* legacy */
+  break-inside: avoid;
+
+  /* Fixed A4 width and min-height at 96 DPI */
+  width: 794px !important;
+  min-height: 1123px !important;
+  padding: 30px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  background-color: #ffffff !important;
+  position: relative !important;
 }
 
 /* Don't create a blank last page */
 .pdf-page:last-child {
-    break-after: auto;
-    page-break-after: auto;
+  break-after: auto;
+  page-break-after: auto;
 }
 
 .pdf-table {
-    table-layout: fixed;
-    width: 100%;
-    border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
 }
 
 /* Avoid rows splitting across pages */
 .pdf-table tr,
 .pdf-table td,
 .pdf-table th {
-    break-inside: avoid;
-    page-break-inside: avoid;
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 
-.pdf-table th,
-.pdf-table td {
+.pdf-table th {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   padding: 6px 4px !important;
   font-size: 11px !important;
-  height: 28px !important;
+  font-weight: 700 !important;
+  height: 32px !important;
   vertical-align: middle;
+  text-align: center;
+}
+
+.pdf-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 4px 4px !important;
+  font-size: 11px !important;
+  height: 42px !important;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.pdf-time-cell {
+  display: block !important;
+  width: 100% !important;
+  text-align: center !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+}
+
+.pdf-date-line {
+  display: block !important;
+  font-size: 10px !important;
+  line-height: 13px !important;
+  color: #4b5563 !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.pdf-time-line {
+  display: block !important;
+  font-size: 10.5px !important;
+  line-height: 14px !important;
+  color: #111827 !important;
+  font-weight: 600 !important;
+  margin: 2px 0 0 0 !important;
+  padding: 0 !important;
+}
+
+/* Footer summary section */
+.pdf-footer-section {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1.5px solid #000000;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.pdf-footer-cards-container {
+  display: flex !important;
+  gap: 12px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+}
+
+.pdf-footer-card {
+  flex: 1 !important;
+  min-width: 0 !important;
+  border: 1px solid #000000 !important;
+  background-color: #ffffff !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  box-sizing: border-box !important;
+}
+
+.pdf-footer-card-header {
+  background-color: #e5e7eb !important;
+  border-bottom: 1px solid #000000 !important;
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  text-align: center !important;
+  color: #111827 !important;
+  letter-spacing: 0.025em !important;
+}
+
+.pdf-footer-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  table-layout: auto !important;
+}
+
+.pdf-footer-table tr {
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+.pdf-footer-table tr:last-child {
+  border-bottom: none !important;
+}
+
+.pdf-footer-table td {
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+  height: auto !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
+}
+
+.pdf-footer-card-bottom {
+  background-color: #f3f4f6 !important;
+  border-top: 1px solid #000000 !important;
+  padding: 5px 8px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  color: #111827 !important;
 }

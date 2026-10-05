@@ -116,6 +116,9 @@ export default function DataTable({
                 enhancedCol.renderCell = (params) => {
                     if (params.row.isTotalRow) {
                         if (['otherDeductions', 'totalEarnings', 'totalDeductions', 'netSalary'].includes(col.field)) {
+                            if (col.renderCell) {
+                                return col.renderCell(params);
+                            }
                             return <span>₹{params.value?.toLocaleString('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}</span>;
                         }
                         return <span></span>; // empty for other columns in total row
@@ -222,8 +225,29 @@ export default function DataTable({
                         fontWeight: 'bold',
                         backgroundColor: theme.palette.grey[100],
                         borderTop: `2px solid ${theme.palette.grey[300]}`,
-                        '& .MuiDataGrid-cell[data-field="totalEarnings"], & .MuiDataGrid-cell[data-field="totalDeductions"], & .MuiDataGrid-cell[data-field="netSalary"]': {
+                        '& .MuiDataGrid-cell--textRight': {
                             textAlign: 'right',
+                            justifyContent: 'flex-end',
+                        },
+                        '& .MuiDataGrid-cell--textLeft': {
+                            textAlign: 'left',
+                            justifyContent: 'flex-start',
+                        },
+                        '& .MuiDataGrid-cell--textCenter': {
+                            textAlign: 'center',
+                            justifyContent: 'center',
+                        },
+                        '& .MuiDataGrid-cell[data-field="totalEarnings"], & .MuiDataGrid-cell[data-field="totalDeductions"]': {
+                            textAlign: 'right',
+                            justifyContent: 'flex-end',
+                        },
+                        '& .MuiDataGrid-cell[data-field="netSalary"].MuiDataGrid-cell--textLeft': {
+                            textAlign: 'left',
+                            justifyContent: 'flex-start',
+                        },
+                        '& .MuiDataGrid-cell[data-field="netSalary"]:not(.MuiDataGrid-cell--textLeft)': {
+                            textAlign: 'right',
+                            justifyContent: 'flex-end',
                         },
                         '& .MuiDataGrid-cell[data-field="employeeName"]': {
                             textAlign: 'left',
