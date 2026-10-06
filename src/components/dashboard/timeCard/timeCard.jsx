@@ -136,6 +136,8 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
 
     const createUserTotalRow = (user) => {
         const entries = user.data || [];
+        const todaySalary = sumNumberField(entries, 'todaySalary');
+        const foodCharge = sumNumberField(entries, 'foodCharge');
         return {
             id: `total-${user.id}`,
             userName: 'Total',
@@ -144,9 +146,9 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             timeOut: '',
             workHours: sumTimeStrings(entries, 'workHours'),
             status: '',
-            todaySalary: sumNumberField(entries, 'todaySalary'),
-            foodCharge: sumNumberField(entries, 'foodCharge'),
-            netSalary: sumNumberField(entries, 'netSalary'),
+            todaySalary: todaySalary,
+            foodCharge: foodCharge,
+            netSalary: todaySalary - foodCharge,
             action: '',
         };
     };

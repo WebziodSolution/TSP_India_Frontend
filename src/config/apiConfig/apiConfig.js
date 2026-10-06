@@ -49,6 +49,7 @@ export const holidayTemplateDetailsURL = baseURL + '/holidayTemplateDetails'
 export const deductionsURL = baseURL + '/deductions'
 export const leaveTypeURL = baseURL + '/leaveType'
 export const employeeLeaveMasterURL = baseURL + '/employeeLeaveMaster'
+export const additionalDeductionsURL = baseURL + '/additionalDeductions'
 
 
 export const countryURL = baseURL + '/country'

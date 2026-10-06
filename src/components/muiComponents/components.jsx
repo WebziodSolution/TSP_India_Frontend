@@ -1,5 +1,5 @@
 import { LoadingButton } from '@mui/lab';
-import { Checkbox, TextField, InputAdornment, Button, FormGroup, FormControlLabel, AppBar, Box, IconButton, Toolbar, Typography, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Collapse, Tabs, Tab, Autocomplete, Paper, Stepper, Step, StepLabel, MenuItem, Alert, Snackbar, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Menu, Avatar, Divider, Popover, Switch, Tooltip } from '@mui/material';
+import { Checkbox, TextField, InputAdornment, Button, FormGroup, FormControlLabel, AppBar, Box, IconButton, Toolbar, Typography, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Collapse, Tabs, Tab, Autocomplete, Paper, Stepper, Step, StepLabel, MenuItem, Alert, Snackbar, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Menu, Avatar, Divider, Popover, Switch, Tooltip, CircularProgress } from '@mui/material';
 
 const Components = {
   Avatar,
@@ -40,7 +40,8 @@ const Components = {
   Menu,
   Popover,
   Switch,
-  Tooltip
+  Tooltip,
+  CircularProgress
 };
 
 export default Components;

@@ -15,6 +15,9 @@ import { handleSetTitle, setAlert } from "../../../../redux/commonReducers/commo
 import { connect } from "react-redux";
 import PermissionWrapper from "../../../common/permissionWrapper/PermissionWrapper";
 import DatePickerComponent from "../../../common/datePickerComponent/datePickerComponent";
+import Components from "../../../muiComponents/components";
+import AdditionalDeductionsModel from "../../../models/additionalDeductions/additionalDeductionsModel";
+import { Tooltip } from "@mui/material";
 
 const filterOptions = [
     { id: 1, title: 'January', value: 1 },
@@ -42,7 +45,9 @@ const GenerateSalary = ({ setAlert, handleSetTitle }) => {
     const [filter, setFilter] = useState(null);
     const [dialog, setDialog] = useState({ open: false, title: '', message: '', actionButtonText: '' });
     const [loading, setLoading] = useState(false);
-
+    const [openAdditionalDeductionsDialog, setOpenAdditionalDeductionsDialog] = useState(false);
+    const [selectedUserId, setSelectedUserId] = useState(null);
+    const [selectedUserName, setSelectedUserName] = useState('');
     const {
         control,
         watch,
@@ -348,6 +353,18 @@ const GenerateSalary = ({ setAlert, handleSetTitle }) => {
         };
     };
 
+    const handleOpenAdditionalDeductionsDialog = (rowItem) => {
+        setSelectedUserId(rowItem?.employeeId);
+        setSelectedUserName(rowItem?.employeeName || '');
+        setOpenAdditionalDeductionsDialog(true);
+    }
+
+    const handleCloseAdditionalDeductionsDialog = () => {
+        setOpenAdditionalDeductionsDialog(false);
+        setSelectedUserId(null);
+        setSelectedUserName('');
+    }
+
     const columns = useMemo(() => {
         const baseColumns = [
             { field: 'employeeName', headerName: 'Employee Name', headerClassName: 'uppercase', flex: 1, maxWidth: 180, sortable: false, disableColumnMenu: true },
@@ -401,6 +418,27 @@ const GenerateSalary = ({ setAlert, handleSetTitle }) => {
                 sortable: false,
                 align: "right", headerAlign: "right", renderCell: (params) => <span>₹{params.value?.toLocaleString('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}</span>
             },
+            {
+                field: 'actions', headerName: 'Action', headerClassName: 'uppercase', flex: 1, maxWidth: 150,
+                sortable: false,
+                align: "center", headerAlign: "center", renderCell: (params) => {
+                    if (params.row?.isTotalRow || params.row?.rowId === 'Total' || !params.row?.employeeId) {
+                        return null;
+                    }
+
+                    return (
+                        <div className='flex items-center gap-2 justify-center h-full'>
+                            <Tooltip title="Add Additional Deductions" arrow placement="bottom">
+                                <div className='bg-blue-600 h-6 w-6 flex justify-center items-center rounded-full text-white'>
+                                    <Components.IconButton onClick={() => handleOpenAdditionalDeductionsDialog(params.row)}>
+                                        <CustomIcons iconName={'fa-solid fa-plus'} css='cursor-pointer text-white text-sm' />
+                                    </Components.IconButton>
+                                </div>
+                            </Tooltip>
+                        </div>
+                    );
+                }
+            }
         ];
         return baseColumns;
     }, [row]);
@@ -542,7 +580,7 @@ const GenerateSalary = ({ setAlert, handleSetTitle }) => {
                 </div>
             </div>
             <AlertDialog open={dialog.open} title={dialog.title} message={dialog.message} actionButtonText={dialog.actionButtonText} handleAction={handleSaveSalary} handleClose={handleCloseSalaryDialog} loading={loading} note={`This action will save salary statements for all employees and departments for the month of ${filter?.title}-${selectedYear}.`} />
-
+            <AdditionalDeductionsModel open={openAdditionalDeductionsDialog} handleClose={handleCloseAdditionalDeductionsDialog} month={filter?.title} userId={selectedUserId} userName={selectedUserName} onSuccess={handleGetStatements} />
         </>
     );
 };

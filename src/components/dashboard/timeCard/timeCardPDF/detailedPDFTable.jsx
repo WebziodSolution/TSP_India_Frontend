@@ -208,7 +208,9 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, 
             otAmount = sumNumericField(entries, 'otAmount');
         }
 
-        const baseNetSalary = sumNumericField(entries || [], 'netSalary');
+        const baseDaySalary = sumNumericField(entries || [], 'todaySalary');
+        const baseFoodCharge = sumNumericField(entries || [], 'foodCharge');
+        const baseNetSalary = baseDaySalary - baseFoodCharge;
         const finalNetSalary = Math.round(baseNetSalary + otAmount + totalAllowances - totalDeductions);
 
         const otHours = user?.totalOvertime || sumTimeField(entries || [], 'overtime');
@@ -303,7 +305,7 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, 
                                     </tr>
                                     <tr>
                                         <td className="text-left text-gray-700">
-                                            OT Amount {hasOtHours ? <span className="text-gray-500 font-normal">({otHours})</span> : null}
+                                            OT Amount
                                         </td>
                                         <td className="text-right font-semibold text-gray-700">
                                             + ₹{otAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
@@ -456,7 +458,7 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, 
                                                     <td className="border border-black text-center text-sm">{sumTimeField(entries, 'workHours')}</td>
                                                     <td className="border border-black text-center text-sm">₹{sumNumericField(entries, 'todaySalary').toLocaleString('en-IN')}</td>
                                                     <td className="border border-black text-center text-sm">₹{sumNumericField(entries, 'foodCharge').toLocaleString('en-IN')}</td>
-                                                    <td className="border border-black text-center text-sm">₹{sumNumericField(entries, 'netSalary').toLocaleString('en-IN')}</td>
+                                                    <td className="border border-black text-center text-sm">₹{(sumNumericField(entries, 'todaySalary') - sumNumericField(entries, 'foodCharge')).toLocaleString('en-IN')}</td>
                                                     <td className="border border-black text-center text-sm">-</td>
                                                 </tr>
                                             </>
@@ -682,7 +684,7 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, 
                                                     ₹{sumNumericField(records, 'foodCharge').toLocaleString('en-IN')}
                                                 </td>
                                                 <td className="border border-black text-center text-sm">
-                                                    ₹{sumNumericField(records, 'netSalary').toLocaleString('en-IN')}
+                                                    ₹{(sumNumericField(records, 'todaySalary') - sumNumericField(records, 'foodCharge')).toLocaleString('en-IN')}
                                                 </td>
                                                 <td className="border border-black text-center text-sm">
                                                     -
