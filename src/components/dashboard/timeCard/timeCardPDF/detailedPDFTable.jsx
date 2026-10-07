@@ -197,7 +197,7 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, 
         const deductions = Array.isArray(user?.deductions) ? user.deductions : [];
 
         const totalAllowances = allowances.reduce((acc, curr) => acc + (Number(curr?.amount) || 0), 0);
-        const totalDeductions = deductions.reduce((acc, curr) => acc + (Number(curr?.amount) || 0), 0);
+        const userDeductions = deductions.reduce((acc, curr) => acc + (Number(curr?.amount) || 0), 0);
 
         let otAmount = 0;
         if (user?.totalOtAmount != null && !isNaN(Number(user.totalOtAmount))) {
@@ -210,8 +210,8 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, 
 
         const baseDaySalary = sumNumericField(entries || [], 'todaySalary');
         const baseFoodCharge = sumNumericField(entries || [], 'foodCharge');
-        const baseNetSalary = baseDaySalary - baseFoodCharge;
-        const finalNetSalary = Math.round(baseNetSalary + otAmount + totalAllowances - totalDeductions);
+        const totalDeductions = userDeductions + baseFoodCharge;
+        const finalNetSalary = Math.round(baseDaySalary + otAmount + totalAllowances - totalDeductions);
 
         const otHours = user?.totalOvertime || sumTimeField(entries || [], 'overtime');
         const hasOtHours = otHours && otHours !== "00:00" && otHours !== "0 hr 0 min" && otHours !== "0:00";
@@ -262,23 +262,35 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, 
                             </div>
                             <table className="pdf-footer-table">
                                 <tbody>
-                                    {deductions.length === 0 ? (
+                                    {baseFoodCharge === 0 && deductions.length === 0 ? (
                                         <tr>
                                             <td colSpan={2} className="text-center text-gray-500 italic py-2">
                                                 No deductions
                                             </td>
                                         </tr>
                                     ) : (
-                                        deductions.map((item, idx) => (
-                                            <tr key={item.id || idx}>
-                                                <td className="text-left text-gray-700 capitalize">
-                                                    {item.label || item.name || 'Deduction'}
-                                                </td>
-                                                <td className="text-right font-semibold text-gray-900">
-                                                    ₹{Number(item.amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                                                </td>
-                                            </tr>
-                                        ))
+                                        <>
+                                            {baseFoodCharge > 0 && (
+                                                <tr>
+                                                    <td className="text-left text-gray-700 capitalize">
+                                                        Food Charge
+                                                    </td>
+                                                    <td className="text-right font-semibold text-gray-900">
+                                                        ₹{baseFoodCharge.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                                                    </td>
+                                                </tr>
+                                            )}
+                                            {deductions.map((item, idx) => (
+                                                <tr key={item.id || idx}>
+                                                    <td className="text-left text-gray-700 capitalize">
+                                                        {item.label || item.name || 'Deduction'}
+                                                    </td>
+                                                    <td className="text-right font-semibold text-gray-900">
+                                                        ₹{Number(item.amount || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </>
                                     )}
                                 </tbody>
                             </table>
@@ -298,9 +310,9 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, 
                             <table className="pdf-footer-table">
                                 <tbody>
                                     <tr>
-                                        <td className="text-left text-gray-700">Base Net Salary</td>
+                                        <td className="text-left text-gray-700">Day Salary</td>
                                         <td className="text-right font-semibold text-gray-900">
-                                            ₹{baseNetSalary.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                                            ₹{baseDaySalary.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                                         </td>
                                     </tr>
                                     <tr>

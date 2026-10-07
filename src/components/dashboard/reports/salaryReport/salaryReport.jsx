@@ -243,15 +243,15 @@ const SalaryReport = ({ handleSetTitle }) => {
             },
             {
                 field: 'otAmount', headerName: 'OT (₹)', headerClassName: 'uppercase', sortable: false, flex: 1, maxWidth: 120,
-                align: "right", headerAlign: "right", renderCell: (params) => <span>₹{params.value?.toLocaleString('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}</span>
+                align: "right", headerAlign: "right", renderCell: (params) => <span>₹{params.value ? params.value?.toLocaleString('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 }) : 0}</span>
             },
             {
                 field: 'pfAmount', headerName: 'PF (₹)', headerClassName: 'uppercase', sortable: false, flex: 1, maxWidth: 120,
-                align: "right", headerAlign: "right", renderCell: (params) => <span>₹{params.value?.toLocaleString('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}</span>
+                align: "right", headerAlign: "right", renderCell: (params) => <span>₹{params.value ? params.value?.toLocaleString('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 }) : 0}</span>
             },
             {
                 field: 'ptAmount', headerName: 'PT (₹)', headerClassName: 'uppercase', sortable: false, flex: 1, maxWidth: 120,
-                align: "right", headerAlign: "right", renderCell: (params) => <span>₹{params.value?.toLocaleString('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 })}</span>
+                align: "right", headerAlign: "right", renderCell: (params) => <span>₹{params.value ? params.value?.toLocaleString('en-IN', { maximumFractionDigits: 0, minimumFractionDigits: 0 }) : 0}</span>
             },
             {
                 field: 'totalEarnings', headerName: 'Total Earnings', headerClassName: 'uppercase', sortable: false, flex: 1, maxWidth: 200,
