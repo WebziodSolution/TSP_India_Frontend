@@ -57,6 +57,7 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
     const [loadingDetailPdf, setLoadingDetailPdf] = useState(false);
     const [loadingDownloadPdf, setLoadingDownloadPdf] = useState(false);
 
+    const [allUsers, setAllUsers] = useState([])
     const [users, setUsers] = useState([])
     const [rows, setRow] = useState([])
     const [companyInfo, setCompanyInfo] = useState()
@@ -232,10 +233,12 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
             const data = response.data.result?.map((row) => {
                 return {
                     id: row.employeeId,
-                    title: row.userName
+                    title: row.userName,
+                    departmentId: row.departmentId
                 }
             })
-            setUsers(data)
+            setAllUsers(data || [])
+            setUsers(data || [])
         }
     }
 
@@ -936,12 +939,12 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
                                         options={users}
                                         label={"Employee List"}
                                         placeholder="Select employees"
-                                        value={watch("selectedUserId")?.[0] || []}
+                                        value={field.value?.[0] || null}
                                         onChange={(_, newValue) => {
                                             if (newValue?.id) {
                                                 field.onChange([newValue.id]);
                                             } else {
-                                                setValue("selectedUserId", null);
+                                                field.onChange([]);
                                             }
                                         }}
                                     />
@@ -962,6 +965,18 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
                                     value={field.value || []}
                                     onChange={(newValue) => {
                                         field.onChange(newValue);
+                                        if (newValue && newValue.length > 0) {
+                                            const userList = (allUsers || []).filter((item) =>
+                                                newValue.some((deptId) => String(deptId) === String(item?.departmentId))
+                                            );
+                                            setUsers(userList);
+                                            const currentSelectedUser = watch("selectedUserId")?.[0];
+                                            if (currentSelectedUser && !userList.some((u) => u.id === currentSelectedUser)) {
+                                                setValue("selectedUserId", []);
+                                            }
+                                        } else {
+                                            setUsers(allUsers || []);
+                                        }
                                     }}
                                 />
                             )}

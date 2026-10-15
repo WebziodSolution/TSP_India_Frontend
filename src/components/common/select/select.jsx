@@ -14,7 +14,15 @@ const Select = forwardRef(({ size = "small", label, placeholder, error, helperTe
             options={selectOptions}
             size={size}
             disabled={disabled}
+            getOptionKey={(option) => option?.id}
             getOptionLabel={(option) => option?.title || ""}
+            filterOptions={(options, { inputValue }) => {
+                const search = (inputValue || "").trim().toLowerCase();
+                if (!search) return options;
+                return options.filter((option) =>
+                    option?.title?.toLowerCase().includes(search)
+                );
+            }}
             value={selectedOption}
             isOptionEqualToValue={(option, value) => option?.id === value?.id}
             onChange={(event, newValue) => {
