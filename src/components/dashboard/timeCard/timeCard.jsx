@@ -33,7 +33,7 @@ import { BulkClockInOut } from '../../models/clockInOut/bulkClockInOut';
 
 
 const tabData = [
-    { label: 'User Summary' },
+    { label: 'Monthly Summary' },
     { label: 'All Entries' },
 ];
 

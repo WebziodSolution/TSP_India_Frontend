@@ -548,7 +548,7 @@ const AddEmployeeComponent = ({ setAlert, handleSetTitle, handleSetUserDetails }
             if (res.data.status === 200) {
                 const { imageURL } = res?.data?.result?.uploadedFiles?.[0];
                 const updateRes = await uploadEmployeeImage({
-                employee: imageURL,
+                    employee: imageURL,
                     companyId,
                     employeeId: id,
                 });
@@ -1825,31 +1825,31 @@ const AddEmployeeComponent = ({ setAlert, handleSetTitle, handleSetUserDetails }
                                                         />
                                                     )}
                                                 />
-                                                {
-                                                    watch("employeeTypeId") === 3 && (
-                                                        <Controller
-                                                            name="isPt"
-                                                            control={control}
-                                                            render={({ field }) => (
-                                                                <Checkbox
-                                                                    text={'PT(Professional Tax)'}
-                                                                    onChange={(e) => {
-                                                                        field.onChange(e.target.checked)
-                                                                        if (!e.target.checked) {
-                                                                            setValue("ptAmount", "");
-                                                                        }
-                                                                    }}
-                                                                    checked={field.value}
-                                                                />
-                                                            )}
+                                                {/* {
+                                                    watch("employeeTypeId") === 3 && ( */}
+                                                <Controller
+                                                    name="isPt"
+                                                    control={control}
+                                                    render={({ field }) => (
+                                                        <Checkbox
+                                                            text={'PT(Professional Tax)'}
+                                                            onChange={(e) => {
+                                                                field.onChange(e.target.checked)
+                                                                if (!e.target.checked) {
+                                                                    setValue("ptAmount", "");
+                                                                }
+                                                            }}
+                                                            checked={field.value}
                                                         />
-                                                    )
-                                                }
+                                                    )}
+                                                />
+                                                {/* )
+                                                } */}
 
                                             </div>
 
                                             {
-                                                watch("employeeTypeId") === 3 && (
+                                                watch("isPt") && (
 
                                                     <div className={`col-span-2 transition-all duration-500 ${watch("isPt") ? "opacity-100 text-opacity-100 bg-opacity-100" : "opacity-0 mt-0"}`}>
                                                         <Controller

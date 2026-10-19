@@ -39,6 +39,8 @@ const GenerateSalary = ({ setAlert, handleSetTitle }) => {
     const [years, setYears] = useState([]);
 
     const [users, setUsers] = useState([]);
+    const [filteredUsers, setFilteredUsers] = useState([]);
+
     const [department, setDepartment] = useState([]);
     const [row, setRow] = useState([]);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -165,6 +167,7 @@ const GenerateSalary = ({ setAlert, handleSetTitle }) => {
                         type: 'success',
                         message: 'Salary statements saved successfully!'
                     })
+                    setValue("selectedUserId", []);
                 } else {
                     setAlert({
                         open: true,
@@ -212,7 +215,22 @@ const GenerateSalary = ({ setAlert, handleSetTitle }) => {
             if (data?.month && data?.year) {
                 const res = await getEmployeeSalaryStatements(data);
                 if (res?.data?.status === 200) {
-                    const newData = res.data.result?.map((item, index) => ({
+                    if (!watch("selectedUserId") || watch("selectedUserId").length === 0) {
+                        if (res?.data?.result?.length > 0) {
+                            const uniqueUsers = Array.from(
+                                new Map(
+                                    res.data.result.map((row) => [
+                                        row.employeeId,
+                                        { id: row.employeeId, title: row.employeeName || row.userName }
+                                    ])
+                                ).values()
+                            );
+                            setFilteredUsers(uniqueUsers);
+                        } else {
+                            setFilteredUsers([]);
+                        }
+                    }
+                    const newData = res.data?.result?.map((item, index) => ({
                         ...item,
                         // Ensure 'id' for DataGrid, and 'rowId' for your internal logic/PDF
                         id: item.employeeSalaryStatementId || `employee-${item.employeeId}-${index}`, // Ensure unique 'id' for DataGrid
@@ -273,7 +291,8 @@ const GenerateSalary = ({ setAlert, handleSetTitle }) => {
 
     useEffect(() => {
         setDates();
-    }, [filter]);
+        setValue("selectedUserId", []);
+    }, [filter, selectedYear]);
 
     useEffect(() => {
         handleGetStatements();
@@ -509,9 +528,9 @@ const GenerateSalary = ({ setAlert, handleSetTitle }) => {
                             control={control}
                             render={({ field }) => (
                                 <SelectMultiple
-                                    options={users}
+                                    options={filteredUsers}
                                     label={"Select Employees"}
-                                    placeholder="Select employees"
+                                    placeholder={filteredUsers?.length > 0 ? "Select employees" : "No salary data"}
                                     value={field.value || []}
                                     onChange={(newValue) => {
                                         field.onChange(newValue);

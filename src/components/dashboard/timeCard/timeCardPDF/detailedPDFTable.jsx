@@ -310,7 +310,7 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, 
                             <table className="pdf-footer-table">
                                 <tbody>
                                     <tr>
-                                        <td className="text-left text-gray-700">Day Salary</td>
+                                        <td className="text-left text-gray-700">Total Salary</td>
                                         <td className="text-right font-semibold text-gray-900">
                                             ₹{baseDaySalary.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                                         </td>
@@ -432,20 +432,20 @@ const DetailedPDFTable = ({ companyInfo, data, startDate, endDate, selectedTab, 
                                                         <tr key={i} className="border border-black">
                                                             <td className="border border-black text-center text-sm">{day}</td>
                                                             <td className="border border-black text-center text-sm">
-                                                                {isSecondary ? "" : (isOff ? '-' : (formattedTimeIn ? (
+                                                                {isOff ? '-' : (formattedTimeIn ? (
                                                                     <div className="pdf-time-cell">
                                                                         <div className="pdf-date-line">{formattedTimeIn.dateStr}</div>
                                                                         <div className="pdf-time-line">{formattedTimeIn.timeStr}</div>
                                                                     </div>
-                                                                ) : '-'))}
+                                                                ) : '-')}
                                                             </td>
                                                             <td className="border border-black text-center text-sm">
-                                                                {isSecondary ? "" : (isOff ? '-' : (formattedTimeOut ? (
+                                                                {isOff ? '-' : (formattedTimeOut ? (
                                                                     <div className="pdf-time-cell">
                                                                         <div className="pdf-date-line">{formattedTimeOut.dateStr}</div>
                                                                         <div className="pdf-time-line">{formattedTimeOut.timeStr}</div>
                                                                     </div>
-                                                                ) : '-'))}
+                                                                ) : '-')}
                                                             </td>
                                                             <td className="border border-black text-center text-sm">{isSecondary ? "" : (isOff ? '-' : (row.workHours || '-'))}</td>
                                                             <td className="border border-black text-center text-sm">{isSecondary ? "" : (isOff && row.todaySalary == null ? '-' : todaySal)}</td>
