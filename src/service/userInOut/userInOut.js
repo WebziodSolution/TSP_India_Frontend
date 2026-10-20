@@ -144,3 +144,23 @@ export const addBulkClockInOut = async (data) => {
         console.log(error)
     }
 }
+
+export const getEmployeeFoodReport = async (params) => {
+    try {
+        const response = axiosInterceptor().get(`${userInOutURL}/foodReport?${params}`)
+        return response
+    } catch (error) {
+        console.log(error)
+    }
+}
+
+export const downloadTimeCardPdf = async (params) => {
+    try {
+        const response = await axiosInterceptor().get(`${userInOutURL}/downloadTimeCardPdf?${params}`, {
+            responseType: 'blob'
+        });
+        return response;
+    } catch (error) {
+        console.log(error);
+    }
+};

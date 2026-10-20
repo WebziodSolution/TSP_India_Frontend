@@ -48,6 +48,7 @@ import AutoClockIn from "./components/dashboard/settings/automationrRules/autoCl
 import ManageLeaveType from "./components/dashboard/permissions/manageLeaveType/manageLeaveType";
 import ManageEmployeeLeave from "./components/dashboard/permissions/manageEmployeeLeave/manageEmployeeLeave";
 import LoginIOS from "./iosPage/LoginIOS";
+import FoodReport from "./components/dashboard/reports/foodReport/foodReport";
 
 library.add(fas, far)
 
@@ -181,6 +182,10 @@ function App() {
         {
           path: "ptreport",
           element: <PTReport />,
+        },
+        {
+          path: "foodreport",
+          element: <FoodReport />,
         },
         {
           path: "generatesalary",

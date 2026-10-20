@@ -14,7 +14,7 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import 'dayjs/plugin/timezone';
 
-import { deleteUserInOut, getAllEntriesByUserId, getAllRecordsGroupByUser } from '../../../service/userInOut/userInOut';
+import { deleteUserInOut, getAllEntriesByUserId, getAllRecordsGroupByUser, downloadTimeCardPdf } from '../../../service/userInOut/userInOut';
 import { filterOptionsByMonth, handleFormateUTCDateToLocalDate } from '../../../service/common/commonService';
 import { getAllEmployeeListByCompanyId } from '../../../service/companyEmployee/companyEmployeeService';
 import { connect } from 'react-redux';
@@ -802,64 +802,76 @@ const TimeCard = ({ handleSetTitle, setAlert }) => {
         }
     };
 
-    // --- PDF generation ---
-    const handleGeneratePdfClick = (detail) => {
-        setIsDetailPdf(detail);
-        setShowPdfContent(true);
+    // --- PDF generation via backend API ---
+    const handleGeneratePdfClick = async (detail) => {
         if (detail) {
             setLoadingDetailPdf(true);
         } else {
             setLoadingDownloadPdf(true);
         }
 
-        setTimeout(async () => {
-            const pages = document.querySelectorAll(".pdf-page");
+        try {
+            let params = new URLSearchParams();
+            let userIds = [];
+            let locationIds = [];
+            let departmentIds = [];
 
-            if (!pages.length) {
-                setShowPdfContent(false);
-                setLoadingDetailPdf(false);
-                setLoadingDownloadPdf(false);
-                return;
-            }
-
-            // 1. Render all pages to canvases and calculate dynamic heights
-            const renderedPages = [];
-            for (let i = 0; i < pages.length; i++) {
-                const page = pages[i];
-                const canvas = await html2canvas(page, {
-                    scale: 1.2,
-                    useCORS: true,
-                    backgroundColor: "#ffffff",
-                });
-                const imgData = canvas.toDataURL("image/jpeg", 0.75);
-
-                // Calculate dimensions in mm (width is fixed at 210mm)
-                const imgWidthMM = 210;
-                const imgHeightMM = (canvas.height * imgWidthMM) / canvas.width;
-
-                renderedPages.push({ imgData, width: imgWidthMM, height: imgHeightMM });
-            }
-
-            // 2. Initialize jsPDF using the first page's dynamic dimensions
-            const firstPage = renderedPages[0];
-            const pdf = new jsPDF("p", "mm", [firstPage.width, firstPage.height]);
-
-            // 3. Add images to PDF
-            for (let i = 0; i < renderedPages.length; i++) {
-                const rendered = renderedPages[i];
-                if (i > 0) {
-                    pdf.addPage([rendered.width, rendered.height]);
+            if (
+                userInfo?.roleName !== "Admin" &&
+                userInfo?.roleName !== "Owner" &&
+                userInfo?.companyId &&
+                watch("selectedUserId").length === 0
+            ) {
+                params.append("userIds", [userInfo?.employeeId]);
+            } else {
+                if (watch("selectedUserId") && watch("selectedUserId").length > 0) {
+                    watch("selectedUserId").forEach((id) => userIds.push(id));
+                    params.append("userIds", userIds);
                 }
-                pdf.addImage(rendered.imgData, "JPEG", 0, 0, rendered.width, rendered.height, undefined, "FAST");
             }
 
-            const fileName = `Employee_Attendance_Report_${dayjs(watch("startDate"), "DD/MM/YYYY").format("DD-MM-YYYY")}_To_${dayjs(watch("endDate"), "DD/MM/YYYY").format("DD-MM-YYYY")}.pdf`;
-            pdf.save(fileName);
+            if (watch("locationIds") && watch("locationIds").length > 0) {
+                watch("locationIds").forEach((id) => locationIds.push(id));
+                params.append("locationIds", locationIds);
+            }
 
-            setShowPdfContent(false);
+            if (watch("selectedDepartmentId") && watch("selectedDepartmentId").length > 0) {
+                watch("selectedDepartmentId").forEach((id) => departmentIds.push(id));
+                params.append("departmentIds", departmentIds);
+            }
+
+            if (watch("startDate")) params.append("startDate", watch("startDate"));
+            if (watch("endDate")) params.append("endDate", watch("endDate"));
+
+            params.append("companyId", userInfo?.companyId);
+
+            let userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (userTimeZone === "Asia/Kolkata") userTimeZone = "Asia/Calcutta";
+            params.append("timeZone", userTimeZone);
+            params.append("isDetail", detail);
+
+            const res = await downloadTimeCardPdf(params.toString());
+            if (res?.data) {
+                const blob = new Blob([res.data], { type: "application/pdf" });
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = downloadUrl;
+                const formattedStart = watch("startDate") ? watch("startDate").replace(/\//g, "-") : "";
+                const formattedEnd = watch("endDate") ? watch("endDate").replace(/\//g, "-") : "";
+                const reportType = detail ? "Detailed" : "Summary";
+                a.download = `Employee_Attendance_${reportType}_Report_${formattedStart}_To_${formattedEnd}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(downloadUrl);
+            }
+        } catch (error) {
+            console.error("Error downloading PDF:", error);
+            setAlert({ open: true, message: "Failed to download PDF", type: "error" });
+        } finally {
             setLoadingDetailPdf(false);
             setLoadingDownloadPdf(false);
-        }, 300);
+        }
     };
 
     const actionButtons = () => {
