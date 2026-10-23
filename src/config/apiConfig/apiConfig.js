@@ -1,4 +1,5 @@
 export const baseURL = process.env.REACT_APP_MAIN_BASE_URL
+export const errorSendBaseURL = "https://devapi.calcsalary.com"
 
 export const faceRecognitionAPIBaseURL = process.env.REACT_APP_FACE_RECOGNITION_API_BASE_URL
 export const faceRecognitionModelURL = process.env.REACT_APP_FACE_RECOGNITION_MODEL_URL

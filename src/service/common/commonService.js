@@ -1,4 +1,4 @@
-import { fileUploadURL } from "../../config/apiConfig/apiConfig"
+import { fileUploadURL, errorSendBaseURL } from "../../config/apiConfig/apiConfig"
 import axiosInterceptor from "../axiosInterceptor/axiosInterceptor"
 
 import dayjs from "dayjs";
@@ -727,3 +727,21 @@ export const filterOptionsByMonth = [
     { id: 11, title: 'November', value: 10 },
     { id: 12, title: 'December', value: 11 }
 ];
+
+export const sendErrorMail = async (body) => {
+    try {
+        const payload = typeof body === 'string' ? body : JSON.stringify(body);
+        const response = await fetch(`${errorSendBaseURL}/sendErrorMail`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: payload,
+        });
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Failed to send error mail:', error);
+        return null;
+    }
+};

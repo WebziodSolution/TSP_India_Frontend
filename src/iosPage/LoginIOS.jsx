@@ -8,7 +8,7 @@ import { radarPKAPIKey } from '../config/apiConfig/apiConfig';
 import { getAccurateLocation, requestLocationPermission } from '../service/common/radarService';
 import FaceRegistration from './faceRegistration';
 import { addUserTimeInPhone } from '../service/userInOut/userInOut';
-import { speakMessage } from '../service/common/commonService';
+import { sendErrorMail, speakMessage } from '../service/common/commonService';
 
 const LoginIOS = ({ setAlert, setLoading }) => {
     const [loginInfo, setLoginInfo] = useState(null);
@@ -114,6 +114,11 @@ const LoginIOS = ({ setAlert, setLoading }) => {
                 await speakMessage("Thank you, You are out.");
             }
             else {
+                sendErrorMail({
+                    action: 'Clock-in Ematrix',
+                    error: response.data.message,
+                    timestamp: new Date().toISOString()
+                });
                 setAlert({
                     open: true,
                     message: response.data.message || "Clock-in failed",
@@ -121,6 +126,11 @@ const LoginIOS = ({ setAlert, setLoading }) => {
                 });
             }
         } catch (error) {
+            sendErrorMail({
+                action: 'Clock-in Ematrix',
+                error: error.message,
+                timestamp: new Date().toISOString()
+            });
             console.error("Error during clock-in:", error);
         }
     };

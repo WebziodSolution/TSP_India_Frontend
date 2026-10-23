@@ -3,17 +3,17 @@ import * as faceapi from 'face-api.js';
 import { connect } from 'react-redux';
 import { setAlert } from '../redux/commonReducers/commonReducers';
 
-import { faceRecognitionAPIBaseURL, faceRecognitionModelURL } from '../config/apiConfig/apiConfig';
+import { baseURL, faceRecognitionAPIBaseURL, faceRecognitionModelURL } from '../config/apiConfig/apiConfig';
 
 import Components from '../components/muiComponents/components';
 import CustomIcons from '../components/common/icons/CustomIcons';
 import { isNative, checkCameraPermission } from '../utils/platform';
-import { playBeep } from '../service/common/commonService';
+import { playBeep, sendErrorMail } from '../service/common/commonService';
 
 const API_BASE_URL = faceRecognitionAPIBaseURL;
 const modelsPath = faceRecognitionModelURL;
 
-function FaceRegistration({ setAlert, setLoginInfo }) {
+function FaceRegistration({ setAlert, setLoginInfo, employeeId }) {
 
     const faceAlignedRef = useRef(false);
     const countdownIntervalRef = useRef(null);
@@ -415,31 +415,36 @@ function FaceRegistration({ setAlert, setLoginInfo }) {
             countdownActiveRef.current = false;
 
             // Extract 512D ArcFace descriptor from backend InsightFace service
-            showMessage(setRegisterMessage, 'Analyzing face and extracting 512D descriptor...', 'info');
-            try {
-                const imageBlob = dataURLtoBlob(dataURL);
-                const extractFormData = new FormData();
-                extractFormData.append('image', imageBlob, 'face.jpg');
+            if (baseURL?.startsWith("https://devapi.calcsalary.com")) {
+                showMessage(setRegisterMessage, 'Analyzing face and extracting 512D descriptor...', 'info');
+                try {
+                    const imageBlob = dataURLtoBlob(dataURL);
+                    const extractFormData = new FormData();
+                    extractFormData.append('image', imageBlob, 'face.jpg');
 
-                const extractRes = await fetch(`${API_BASE_URL}/extract-descriptor`, {
-                    method: 'POST',
-                    body: extractFormData,
-                });
-                const extractData = await extractRes.json();
+                    const extractRes = await fetch(`${API_BASE_URL}/extract-descriptor`, {
+                        method: 'POST',
+                        body: extractFormData,
+                    });
+                    const extractData = await extractRes.json();
 
-                if (extractData.success && extractData.descriptor) {
-                    const desc512 = JSON.stringify(extractData.descriptor);
-                    setFaceDescriptor(desc512);
-                    latestDescriptorRef.current = desc512;
-                    showMessage(setRegisterMessage, 'Face captured successfully! Logging in...', 'success');
-                    registerUser(desc512, dataURL);
-                } else {
-                    await playBeep();
-                    showMessage(setRegisterMessage, extractData.detail || 'Could not extract 512D face details. Please retake photo.', 'warning');
+                    if (extractData.success && extractData.descriptor) {
+                        const desc512 = JSON.stringify(extractData.descriptor);
+                        setFaceDescriptor(desc512);
+                        latestDescriptorRef.current = desc512;
+                        showMessage(setRegisterMessage, 'Face captured successfully! Logging in...', 'success');
+                        registerUser(desc512, dataURL);
+                    } else {
+                        await playBeep();
+                        showMessage(setRegisterMessage, extractData.detail || 'Could not extract 512D face details. Please retake photo.', 'warning');
+                    }
+                } catch (err) {
+                    console.error("Error extracting 512D descriptor:", err);
+                    // Fallback to sending photo directly to login
+                    showMessage(setRegisterMessage, 'Processing login with captured photo...', 'info');
+                    registerUser(null, dataURL);
                 }
-            } catch (err) {
-                console.error("Error extracting 512D descriptor:", err);
-                // Fallback to sending photo directly to login
+            } else {
                 showMessage(setRegisterMessage, 'Processing login with captured photo...', 'info');
                 registerUser(null, dataURL);
             }
@@ -476,6 +481,8 @@ function FaceRegistration({ setAlert, setLoginInfo }) {
 
         const formData = new FormData();
         const apiEndpoint = "/login";
+
+        formData.append('employeeId', employeeId);
 
         // Send captured photo as JPEG image file for InsightFace 512D ArcFace processing
         if (activeDataURL) {
@@ -518,6 +525,11 @@ function FaceRegistration({ setAlert, setLoginInfo }) {
                 setLoginInfo(data);
             } else {
                 await playBeep();
+                sendErrorMail({
+                    action: 'Login Face Recognition Ematrix',
+                    error: data.message || data.detail,
+                    timestamp: new Date().toISOString()
+                });
                 setAlert({
                     open: true,
                     type: 'error',
@@ -529,6 +541,11 @@ function FaceRegistration({ setAlert, setLoginInfo }) {
             }
         } catch (error) {
             console.error('Network error details:', error);
+            sendErrorMail({
+                action: 'Login Face Recognition Ematrix',
+                error: error,
+                timestamp: new Date().toISOString()
+            });
             setAlert({
                 open: true,
                 type: 'error',

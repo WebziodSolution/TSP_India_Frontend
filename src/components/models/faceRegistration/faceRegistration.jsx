@@ -6,8 +6,9 @@ import Button from '../../common/buttons/button';
 import { connect } from 'react-redux';
 import { setAlert } from '../../../redux/commonReducers/commonReducers';
 import CustomIcons from '../../common/icons/CustomIcons';
-import { faceRecognitionAPIBaseURL, faceRecognitionModelURL } from '../../../config/apiConfig/apiConfig';
+import { baseURL, faceRecognitionAPIBaseURL, faceRecognitionModelURL } from '../../../config/apiConfig/apiConfig';
 import { useNavigate } from 'react-router-dom';
+import { sendErrorMail } from '../../../service/common/commonService';
 
 const BootstrapDialog = styled(Components.Dialog)(({ theme }) => ({
     '& .MuiDialogContent-root': {
@@ -428,29 +429,33 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
             countdownActiveRef.current = false;
 
             // Extract 512D ArcFace descriptor from backend InsightFace service
-            showMessage(setRegisterMessage, 'Analyzing face and extracting 512D descriptor...', 'info');
-            try {
-                const imageBlob = dataURLtoBlob(dataURL);
-                const extractFormData = new FormData();
-                extractFormData.append('image', imageBlob, 'face.jpg');
+            if (baseURL?.startsWith("https://devapi.calcsalary.com")) {
+                showMessage(setRegisterMessage, 'Analyzing face and extracting 512D descriptor...', 'info');
+                try {
+                    const imageBlob = dataURLtoBlob(dataURL);
+                    const extractFormData = new FormData();
+                    extractFormData.append('image', imageBlob, 'face.jpg');
 
-                const extractRes = await fetch(`${API_BASE_URL}/extract-descriptor`, {
-                    method: 'POST',
-                    body: extractFormData,
-                });
-                const extractData = await extractRes.json();
+                    const extractRes = await fetch(`${API_BASE_URL}/extract-descriptor`, {
+                        method: 'POST',
+                        body: extractFormData,
+                    });
+                    const extractData = await extractRes.json();
 
-                if (extractData.success && extractData.descriptor) {
-                    const desc512 = JSON.stringify(extractData.descriptor);
-                    setFaceDescriptor(desc512);
-                    latestDescriptorRef.current = desc512;
-                    showMessage(setRegisterMessage, 'Face captured and 512D descriptor generated successfully! You can now proceed.', 'success');
-                } else {
-                    showMessage(setRegisterMessage, extractData.detail || 'Could not extract 512D face details. Please retake photo.', 'warning');
+                    if (extractData.success && extractData.descriptor) {
+                        const desc512 = JSON.stringify(extractData.descriptor);
+                        setFaceDescriptor(desc512);
+                        latestDescriptorRef.current = desc512;
+                        showMessage(setRegisterMessage, 'Face captured and 512D descriptor generated successfully! You can now proceed.', 'success');
+                    } else {
+                        showMessage(setRegisterMessage, extractData.detail || 'Could not extract 512D face details. Please retake photo.', 'warning');
+                    }
+                } catch (err) {
+                    console.error("Error extracting 512D descriptor:", err);
+                    showMessage(setRegisterMessage, 'Photo captured, but server could not extract 512D descriptor. Please retake.', 'warning');
                 }
-            } catch (err) {
-                console.error("Error extracting 512D descriptor:", err);
-                showMessage(setRegisterMessage, 'Photo captured, but server could not extract 512D descriptor. Please retake.', 'warning');
+            } else {
+                showMessage(setRegisterMessage, 'Face captured successfully! You can now proceed.', 'success');
             }
         } catch (err) {
             console.error('Error capturing photo:', err);
@@ -473,20 +478,25 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
         startWebcam();
     };
 
-    const registerUser = async () => {
+    const registerUser = async (overrideDescriptor = null, overrideImageURL = null) => {
         setIsLoading(true);
         clearMessage(setRegisterMessage);
 
-        if (!capturedImageDataURL) {
+        const activeDataURL = overrideImageURL || capturedImageDataURL;
+        const activeDescriptor = overrideDescriptor !== null ? overrideDescriptor : faceDescriptor;
+
+        if (!activeDataURL) {
             setIsLoading(false);
             showMessage(setRegisterMessage, 'Please capture your photo before proceeding.', 'error');
             return;
         }
 
-        if (!faceDescriptor) {
-            setIsLoading(false);
-            showMessage(setRegisterMessage, 'Please wait for the 512D face descriptor to finish generating, or retake photo.', 'warning');
-            return;
+        if (baseURL?.startsWith("https://devapi.calcsalary.com")) {
+            if (!activeDescriptor) {
+                setIsLoading(false);
+                showMessage(setRegisterMessage, 'Please wait for the 512D face descriptor to finish generating, or retake photo.', 'warning');
+                return;
+            }
         }
 
         const formData = new FormData();
@@ -498,16 +508,16 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
 
         // Send captured photo as JPEG image file for InsightFace 512D ArcFace processing
         try {
-            const imageBlob = dataURLtoBlob(capturedImageDataURL);
+            const imageBlob = dataURLtoBlob(activeDataURL);
             formData.append('image', imageBlob, 'face.jpg');
         } catch (e) {
             console.error('Error converting dataURL to blob:', e);
         }
 
         // Also send base64 data and 512D descriptor for server compatibility
-        formData.append('image_base64', capturedImageDataURL);
-        if (faceDescriptor) {
-            formData.append('faceDescriptor', faceDescriptor);
+        formData.append('image_base64', activeDataURL);
+        if (activeDescriptor) {
+            formData.append('faceDescriptor', activeDescriptor);
         }
 
         try {
@@ -531,6 +541,11 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
                 onClose();
             } else {
                 setIsLoading(false);
+                sendErrorMail({
+                    action: `${isLogin ? 'Login' : 'Registration'} Face Ematrix`,
+                    error: data.message,
+                    timestamp: new Date().toISOString()
+                });
                 setAlert({
                     open: true,
                     type: 'error',
@@ -539,6 +554,11 @@ function FaceRegistration({ setAlert, open, handleClose, employeeId, type = null
             }
         } catch (error) {
             setIsLoading(false);
+            sendErrorMail({
+                action: `${isLogin ? 'Login' : 'Registration'} Face Ematrix`,
+                error: error,
+                timestamp: new Date().toISOString()
+            });
             setAlert({
                 type: 'error',
                 message: `${isLogin ? 'Login' : 'Registration'} failed due to network or server error.`
